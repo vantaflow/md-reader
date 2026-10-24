@@ -1382,6 +1382,80 @@ app.whenReady().then(async () => {
     !/`note\.markdown` visant le même `note\.pdf` : le second est ignoré/.test(readmeSrc6), 'README non corrigé');
   check('Minor 6 — le README dit que note.markdown est gardé', /note\.markdown.*avant.*note\.md/.test(readmeSrc6), 'phrase absente');
 
+  // ── Affichage en pages A4 et panneau redimensionnable ──
+  // Le découpage en feuilles déplace les nœuds de l'aperçu : il ne doit ni en
+  // perdre, ni laisser ses feuilles dans un export, ni survivre au retour en
+  // mode continu.
+  const LONG_SAMPLE = [
+    '# Document long', '',
+    ...Array.from({ length: 120 }, (_, i) => (i % 3 === 0 ? `## Partie ${i / 3 + 1}\n\n` : '')
+      + `Paragraphe ${i + 1} : ` + 'texte de remplissage '.repeat(12) + '\n'),
+    '<!-- pagebreak -->', '',
+    '## Après le saut', '', 'Dernier paragraphe.', '',
+  ].join('\n');
+  const a4 = await win.webContents.executeJavaScript(`(async () => {
+    window.newTab({ content: ${JSON.stringify(LONG_SAMPLE)} });
+    await new Promise(r => setTimeout(r, 400));
+    const preview = document.getElementById('preview');
+    const paragraphesAvant = preview.querySelectorAll('p').length;
+    window.choisirModeAffichage('a4');
+    const pages = Array.from(preview.querySelectorAll('.a4-page'));
+    const debordements = pages.filter(p => !p.classList.contains('longue')
+      && p.querySelector('.a4-contenu').scrollHeight > p.querySelector('.a4-contenu').clientHeight + 1).length;
+    const titreApresSaut = pages.findIndex(p => /Après le saut/.test(p.textContent));
+    const sautEnTete = titreApresSaut > 0
+      && pages[titreApresSaut].querySelector('.a4-contenu').firstElementChild.classList.contains('page-break');
+    const paragraphesA4 = preview.querySelectorAll('.a4-contenu p').length;
+    const titresOrphelins = Array.from(preview.querySelectorAll('.a4-contenu'))
+      .filter(c => c.parentElement.nextElementSibling && /^H[1-6]$/.test(c.lastElementChild?.nodeName || '')).length;
+    const exportHtml = await window.buildPrintableHtml({});
+    window.choisirModeAffichage('a4');
+    const exportHtmlHtml = await window.buildExportHtml({});
+    window.choisirModeAffichage('a4-double');
+    const double = !!preview.querySelector(':scope > .a4-feuilles.double');
+    const numero = preview.querySelector('.a4-numero')?.textContent || '';
+    window.choisirModeAffichage('continu');
+    const resultat = {
+      pages: pages.length, debordements, sautEnTete, paragraphesAvant, paragraphesA4, titresOrphelins,
+      // Le corps seulement : l'export embarque styles.css, qui décrit les feuilles.
+      exportSansFeuilles: !exportHtml.slice(exportHtml.indexOf('<body>')).includes('a4-page')
+        && exportHtml.includes('Paragraphe 120'),
+      exportHtmlSansFeuilles: !exportHtmlHtml.slice(exportHtmlHtml.indexOf('<body>')).includes('a4-page')
+        && exportHtmlHtml.includes('Dernier paragraphe'),
+      double, numero,
+      continuPropre: !preview.querySelector('.a4-feuilles') && !preview.classList.contains('pagine'),
+      paragraphesApres: preview.querySelectorAll('p').length,
+    };
+    localStorage.removeItem('modeAffichage');
+    return JSON.stringify(resultat);
+  })()`);
+  const a4r = JSON.parse(a4);
+  check('A4 — un document long est découpé en plusieurs feuilles', a4r.pages > 2, a4);
+  check('A4 — aucune feuille normale ne déborde', a4r.debordements === 0, a4);
+  check('A4 — un saut de page ouvre une nouvelle feuille', a4r.sautEnTete, a4);
+  check('A4 — aucun paragraphe perdu dans les feuilles', a4r.paragraphesA4 === a4r.paragraphesAvant, a4);
+  check('A4 — aucun titre seul en bas de feuille', a4r.titresOrphelins === 0, a4);
+  check('A4 — l’export PDF ne contient pas les feuilles d’affichage', a4r.exportSansFeuilles, a4);
+  check('A4 — l’export HTML ne contient pas les feuilles d’affichage', a4r.exportHtmlSansFeuilles, a4);
+  check('A4 — le mode deux pages place les feuilles côte à côte', a4r.double, a4);
+  check('A4 — chaque feuille porte son numéro', /^1 \/ \d+$/.test(a4r.numero), a4);
+  check('A4 — le retour en continu retire les feuilles sans perdre de contenu',
+    a4r.continuPropre && a4r.paragraphesApres === a4r.paragraphesAvant, a4);
+
+  const panneau = await win.webContents.executeJavaScript(`(() => {
+    const sidebar = document.getElementById('sidebar');
+    window.appliquerLargeurPanneau(320);
+    const apresReglage = Math.round(sidebar.getBoundingClientRect().width);
+    document.getElementById('sidebar-resizer').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    const apresDoubleClic = Math.round(sidebar.getBoundingClientRect().width);
+    const memorisee = localStorage.getItem('largeurPanneau');
+    localStorage.removeItem('largeurPanneau');
+    return JSON.stringify({ apresReglage, apresDoubleClic, memorisee });
+  })()`);
+  const pn = JSON.parse(panneau);
+  check('Panneau — la largeur réglée s’applique', pn.apresReglage === 320, panneau);
+  check('Panneau — le double-clic revient à 240 px et le mémorise', pn.apresDoubleClic === 240 && pn.memorisee === '240', panneau);
+
   const failed = results.filter(x => !x.ok);
   console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
   clearTimeout(chienDeGarde);

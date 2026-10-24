@@ -24,6 +24,11 @@
     <label class="toggle"><input type="checkbox" id="toggle-editor" /> Code</label>
     <label class="toggle"><input type="checkbox" id="toggle-sync" checked /> Sync</label>
     <label class="toggle"><input type="checkbox" id="toggle-autosave" /> Autosave</label>
+    <select id="mode-affichage" title="Affichage de l'aperçu">
+      <option value="continu">Continu</option>
+      <option value="a4">A4 · 1 page</option>
+      <option value="a4-double">A4 · 2 pages</option>
+    </select>
     <button id="btn-theme" title="Thème (Cmd+T)">🌓</button>
     <span id="file-name">Sans titre</span>
   </header>
@@ -32,6 +37,7 @@
 
   <main>
     <aside id="sidebar">
+      <div id="sidebar-resizer" title="Glisser pour redimensionner · double-clic : largeur par défaut"></div>
       <div class="sidebar-tabs">
         <button data-tab="toc">Menu</button>
         <button data-tab="files" class="active">Fichiers</button>

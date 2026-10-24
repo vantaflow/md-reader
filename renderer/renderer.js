@@ -168,6 +168,7 @@ function render() {
   const src = editor ? editor.getValue() : '';
   const { meta, body } = stripFrontMatter(src);
   frontMatter = meta;
+  preview.classList.remove('pagine');
   preview.innerHTML = md.parse(body);
   const { headings } = md.enhance(preview);
   resolveLocalImages();
@@ -187,6 +188,7 @@ function render() {
 
   buildToc(headings);
   updateStats();
+  planifierPagination();
 }
 
 function markDirty() {
@@ -394,6 +396,181 @@ document.getElementById('btn-sidebar').addEventListener('click', () => {
   const hidden = mainEl.classList.toggle('no-sidebar');
   localStorage.setItem('sidebarVisible', !hidden);
 });
+
+// Panneau latéral : largeur réglable à la souris, mémorisée entre les sessions.
+// Double-clic sur la poignée : retour à la largeur par défaut.
+const LARGEUR_PANNEAU_DEFAUT = 240;
+const LARGEUR_PANNEAU_MIN = 140;
+function appliquerLargeurPanneau(px) {
+  mainEl.style.setProperty('--largeur-panneau', px + 'px');
+}
+{
+  const memorisee = parseInt(localStorage.getItem('largeurPanneau'), 10);
+  if (memorisee >= LARGEUR_PANNEAU_MIN) appliquerLargeurPanneau(memorisee);
+  const poignee = document.getElementById('sidebar-resizer');
+  const panneau = document.getElementById('sidebar');
+  poignee.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    poignee.setPointerCapture(e.pointerId);
+    document.body.classList.add('redimensionnement');
+    const gauche = panneau.getBoundingClientRect().left;
+    const deplacer = (ev) => {
+      const max = Math.max(LARGEUR_PANNEAU_MIN, Math.round(window.innerWidth * 0.6));
+      appliquerLargeurPanneau(Math.min(max, Math.max(LARGEUR_PANNEAU_MIN, Math.round(ev.clientX - gauche))));
+    };
+    const relacher = () => {
+      poignee.removeEventListener('pointermove', deplacer);
+      poignee.removeEventListener('pointerup', relacher);
+      poignee.removeEventListener('pointercancel', relacher);
+      document.body.classList.remove('redimensionnement');
+      localStorage.setItem('largeurPanneau', Math.round(panneau.getBoundingClientRect().width));
+    };
+    poignee.addEventListener('pointermove', deplacer);
+    poignee.addEventListener('pointerup', relacher);
+    poignee.addEventListener('pointercancel', relacher);
+  });
+  poignee.addEventListener('dblclick', () => {
+    appliquerLargeurPanneau(LARGEUR_PANNEAU_DEFAUT);
+    localStorage.setItem('largeurPanneau', LARGEUR_PANNEAU_DEFAUT);
+  });
+}
+
+// ---------- Affichage en pages A4 ----------
+// L'aperçu peut se lire en continu, ou découpé en feuilles A4 (une colonne,
+// ou deux feuilles côte à côte). Le découpage ne fait que déplacer les nœuds
+// rendus dans des feuilles : rien n'est recopié, la table des matières et la
+// synchronisation du défilement continuent de pointer sur les mêmes éléments.
+// Les fonctions ci-dessous peuvent être appelées par render() avant que ce
+// bloc ne soit exécuté : elles ne lisent donc que le DOM, et la minuterie est
+// en `var` pour ne pas tomber dans la zone morte d'un `let`.
+var MODES_AFFICHAGE = ['continu', 'a4', 'a4-double'];
+var minuterieA4 = null;
+
+function modeAffichage() {
+  const s = document.getElementById('mode-affichage');
+  return s && ['a4', 'a4-double'].includes(s.value) ? s.value : 'continu';
+}
+
+// Le contenu tel que le Markdown l'a produit, sans les feuilles d'affichage :
+// c'est ce que les exports doivent recevoir, quel que soit le mode.
+function contenuApercuHtml() {
+  if (!preview.querySelector(':scope > .a4-feuilles')) return preview.innerHTML;
+  return Array.from(preview.querySelectorAll('.a4-contenu')).map(c => c.innerHTML).join('');
+}
+
+function depaginer() {
+  const feuilles = preview.querySelector(':scope > .a4-feuilles');
+  if (feuilles) {
+    const noeuds = [];
+    feuilles.querySelectorAll('.a4-contenu').forEach(c => noeuds.push(...c.childNodes));
+    preview.replaceChildren(...noeuds);
+  }
+  preview.classList.remove('pagine');
+}
+
+function nouvelleFeuille(conteneur) {
+  const page = document.createElement('div');
+  page.className = 'a4-page';
+  const contenu = document.createElement('div');
+  contenu.className = 'a4-contenu';
+  page.appendChild(contenu);
+  conteneur.appendChild(page);
+  return contenu;
+}
+
+function deborde(contenu) {
+  return contenu.scrollHeight > contenu.clientHeight + 1;
+}
+
+function paginer() {
+  const mode = modeAffichage();
+  const position = preview.scrollTop / Math.max(1, preview.scrollHeight - preview.clientHeight);
+  depaginer();
+  if (mode === 'continu') return;
+
+  const noeuds = Array.from(preview.childNodes)
+    .filter(n => n.nodeType === Node.ELEMENT_NODE || (n.nodeType === Node.TEXT_NODE && n.textContent.trim()));
+  preview.classList.add('pagine');
+  const feuilles = document.createElement('div');
+  feuilles.className = 'a4-feuilles' + (mode === 'a4-double' ? ' double' : '');
+  preview.replaceChildren(feuilles);
+
+  let contenu = nouvelleFeuille(feuilles);
+  let feuillePleine = false;
+  for (const noeud of noeuds) {
+    const saut = noeud.nodeType === Node.ELEMENT_NODE && noeud.classList.contains('page-break');
+    if ((feuillePleine || saut) && contenu.childNodes.length) contenu = nouvelleFeuille(feuilles);
+    feuillePleine = false;
+    contenu.appendChild(noeud);
+    if (!deborde(contenu)) continue;
+    // Le bloc ne tient plus : il part sur une nouvelle feuille, sauf s'il est
+    // seul (plus haut qu'une page). Il occupe alors une feuille allongée,
+    // fermée aussitôt pour que la suite reprenne sur une page normale.
+    if (contenu.childNodes.length > 1) {
+      // Un titre ne reste pas seul en bas de page : il suit son bloc.
+      const precedent = noeud.previousSibling;
+      const titreOrphelin = precedent && contenu.childNodes.length > 2 && /^H[1-6]$/.test(precedent.nodeName);
+      contenu = nouvelleFeuille(feuilles);
+      if (titreOrphelin) contenu.appendChild(precedent);
+      contenu.appendChild(noeud);
+    }
+    if (deborde(contenu)) {
+      contenu.parentElement.classList.add('longue');
+      feuillePleine = true;
+    }
+  }
+
+  const pages = feuilles.querySelectorAll('.a4-page');
+  pages.forEach((page, i) => {
+    const numero = document.createElement('div');
+    numero.className = 'a4-numero';
+    numero.textContent = `${i + 1} / ${pages.length}`;
+    page.appendChild(numero);
+  });
+  // Une image chargée après coup change la hauteur des blocs : on recoupe.
+  preview.querySelectorAll('img').forEach(img => {
+    if (!img.complete) img.addEventListener('load', planifierPagination, { once: true });
+  });
+  ajusterZoomA4();
+  preview.scrollTop = position * Math.max(1, preview.scrollHeight - preview.clientHeight);
+}
+
+// Les feuilles gardent leur taille réelle ; le zoom les fait tenir dans la
+// largeur de l'aperçu, sans jamais les agrandir.
+function ajusterZoomA4() {
+  const feuilles = preview.querySelector(':scope > .a4-feuilles');
+  const page = feuilles && feuilles.querySelector('.a4-page');
+  if (!page) return;
+  feuilles.style.zoom = '';
+  const colonnes = feuilles.classList.contains('double') ? 2 : 1;
+  const largeur = colonnes * page.offsetWidth + (colonnes - 1) * 20;
+  const disponible = preview.clientWidth - 32;
+  feuilles.style.zoom = Math.min(1, disponible / Math.max(1, largeur)).toFixed(3);
+}
+
+function planifierPagination() {
+  if (modeAffichage() === 'continu' && !preview.classList.contains('pagine')) return;
+  clearTimeout(minuterieA4);
+  // Mermaid peint ses schémas de façon asynchrone : on attend qu'il ait fini
+  // pour mesurer les hauteurs réelles.
+  minuterieA4 = setTimeout(() => { mermaidPending.catch(() => {}).then(paginer); }, 150);
+}
+
+function choisirModeAffichage(mode) {
+  const s = document.getElementById('mode-affichage');
+  s.value = MODES_AFFICHAGE.includes(mode) ? mode : 'continu';
+  localStorage.setItem('modeAffichage', s.value);
+  paginer();
+}
+
+{
+  const s = document.getElementById('mode-affichage');
+  const memorise = localStorage.getItem('modeAffichage');
+  s.value = MODES_AFFICHAGE.includes(memorise) ? memorise : 'continu';
+  s.addEventListener('change', () => choisirModeAffichage(s.value));
+  new ResizeObserver(() => ajusterZoomA4()).observe(preview);
+  planifierPagination();
+}
 
 let syncing = false;
 function syncScroll(from, to) {
@@ -637,7 +814,7 @@ async function buildPrintableHtml(options) {
     body { display:block; margin: 0; } header, #tabs, #sidebar, #editor, #statusbar, .modal { display:none !important; }
     main { display: block; } #preview { padding: 0; overflow: visible; }
     ${paginationCss(options)}
-  </style></head><body>${watermarkHtml(options.watermark)}<div id="preview" class="markdown-body">${options.cover ? coverHtml() : ''}${preview.innerHTML}</div></body></html>`;
+  </style></head><body>${watermarkHtml(options.watermark)}<div id="preview" class="markdown-body">${options.cover ? coverHtml() : ''}${contenuApercuHtml()}</div></body></html>`;
 }
 
 async function doExportPdf(options) {
@@ -657,7 +834,7 @@ async function doPrint() {
 async function buildExportHtml(options) {
   render();
   await mermaidPending.catch(() => {});
-  const bodyHtml = preview.innerHTML;
+  const bodyHtml = contenuApercuHtml();
   const css = await fetch('styles.css').then(r => r.text());
   const katexCss = await loadKatexCss();
   const hljsCss = await fetch(document.getElementById('hljs-theme').href).then(r => r.text()).catch(() => '');
@@ -855,6 +1032,9 @@ for (const c of [
   { id: 'vue:code', titre: 'Afficher ou masquer le volet code', raccourci: `${MOD}+/`, executer: () => { toggleEditor.checked = !toggleEditor.checked; toggleEditor.dispatchEvent(new Event('change')); } },
   { id: 'vue:theme', titre: 'Basculer le thème clair ou sombre', raccourci: `${MOD}+T`, executer: () => document.getElementById('btn-theme').click() },
   { id: 'vue:panneau', titre: 'Afficher ou masquer le panneau latéral', executer: () => document.getElementById('btn-sidebar').click() },
+  { id: 'vue:continu', titre: 'Affichage continu', executer: () => choisirModeAffichage('continu') },
+  { id: 'vue:a4', titre: 'Affichage A4, une page', executer: () => choisirModeAffichage('a4') },
+  { id: 'vue:a4-double', titre: 'Affichage A4, deux pages côte à côte', executer: () => choisirModeAffichage('a4-double') },
 ]) window.commands.register(c);
 
 // ---------- Mode focus ----------

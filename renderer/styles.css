@@ -45,15 +45,20 @@ header .sep { width: 1px; height: 18px; background: #4b5563; margin: 0 4px; }
 #tabs .tab .dot { color: var(--dirty); font-weight: bold; }
 #tabs:empty { display: none; }
 
-main { flex: 1; display: grid; grid-template-columns: 240px 1fr 1fr; overflow: hidden; min-width: 0; }
+main { --largeur-panneau: 240px; flex: 1; display: grid; grid-template-columns: var(--largeur-panneau) 1fr 1fr; overflow: hidden; min-width: 0; }
 main > * { min-width: 0; }
-main.no-editor { grid-template-columns: 240px 1fr; }
+main.no-editor { grid-template-columns: var(--largeur-panneau) 1fr; }
 main.no-editor #editor { display: none; }
 main.no-sidebar { grid-template-columns: 1fr 1fr; }
 main.no-sidebar #sidebar { display: none; }
 main.no-sidebar.no-editor { grid-template-columns: 1fr; }
 
-#sidebar { background: var(--bg-sidebar); overflow: hidden; display: flex; flex-direction: column; border-right: 1px solid var(--border); font-size: 13px; }
+#sidebar { position: relative; background: var(--bg-sidebar); overflow: hidden; display: flex; flex-direction: column; border-right: 1px solid var(--border); font-size: 13px; }
+/* Poignée de largeur du panneau : glisser pour redimensionner, double-clic pour revenir à 240 px. */
+#sidebar-resizer { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 2; }
+#sidebar-resizer:hover, body.redimensionnement #sidebar-resizer { background: var(--accent); opacity: 0.5; }
+body.redimensionnement { cursor: col-resize; user-select: none; }
+#mode-affichage { background: var(--btn-bg); color: #fff; border: none; padding: 4px 6px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
 .sidebar-tabs button { flex: 1; padding: 8px; background: none; border: none; cursor: pointer; color: var(--fg-muted); font-size: 12px; }
 .sidebar-tabs button.active { color: var(--fg); background: var(--bg); border-bottom: 2px solid var(--accent); }
@@ -138,6 +143,22 @@ main.no-sidebar.no-editor { grid-template-columns: 1fr; }
   display: flex; align-items: center; justify-content: center; z-index: 1000;
   font-size: 20px; color: var(--accent); pointer-events: none;
 }
+
+/* Affichage en pages A4 : une colonne de feuilles, ou deux côte à côte. Les
+   feuilles gardent leur taille réelle ; seul le zoom du conteneur s'adapte à
+   la largeur de l'aperçu. */
+#preview.pagine { background: var(--bg-alt); padding: 24px 16px; }
+#preview.pagine .a4-feuilles { display: grid; grid-template-columns: 210mm; gap: 20px; justify-content: center; }
+#preview.pagine .a4-feuilles.double { grid-template-columns: repeat(2, 210mm); }
+#preview.pagine .a4-page {
+  position: relative; box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm 20mm 20mm;
+  background: var(--bg); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); overflow: hidden;
+}
+#preview.pagine .a4-page.longue { height: auto; min-height: 297mm; }
+#preview.pagine .a4-contenu { height: 100%; overflow: hidden; }
+#preview.pagine .a4-page.longue .a4-contenu { height: auto; overflow: visible; }
+#preview.pagine .a4-numero { position: absolute; bottom: 8mm; left: 0; right: 0; text-align: center; font-size: 10px; color: var(--fg-muted); }
+#preview.pagine .page-break { display: none; }
 
 /* `<!-- pagebreak -->` marker: a hint on screen, a real page break on paper. */
 #preview .page-break {

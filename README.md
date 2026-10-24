@@ -53,6 +53,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Thème clair / sombre** (`Cmd/Ctrl+T`), appliqué à l'éditeur, l'aperçu et les diagrammes
 - **Images locales** : les chemins relatifs sont résolus par rapport au fichier `.md`, pas à l'application
 - **Saut de page manuel** : insérez `<!-- pagebreak -->` — affiché comme un repère dans l'aperçu, appliqué à l'impression
+- **Affichage en pages A4** : l'aperçu se lit en continu, en feuilles A4 une par une, ou deux feuilles côte à côte. Les feuilles sont numérotées, respectent les sauts de page, gardent un titre avec le bloc qui le suit, et se mettent à l'échelle de la fenêtre. L'export n'en est pas affecté
 
 ### Gestion des fichiers
 - **Onglets multiples** — plusieurs documents ouverts en parallèle, avec déduplication (un fichier déjà ouvert n'est pas rouvert en double, et un onglet vierge est réutilisé)
@@ -101,9 +102,10 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 | ☑ Code | Afficher / masquer le volet éditeur |
 | ☑ Sync | Synchroniser le défilement éditeur ↔ aperçu |
 | ☑ Autosave | Enregistrement automatique |
+| Continu / A4 · 1 page / A4 · 2 pages | Mode d'affichage de l'aperçu |
 | 🌓 | Basculer le thème clair / sombre |
 
-**Panneau latéral** — trois onglets :
+**Panneau latéral** — sa largeur se règle en glissant son bord droit (double-clic pour revenir à la largeur par défaut). Trois onglets :
 
 - **Menu** — table des matières navigable, générée depuis les titres du document
 - **Fichiers** — arborescence du dossier ouvert
@@ -131,6 +133,8 @@ Ces réglages sont conservés d'une session à l'autre (via `localStorage`) :
 | Thème | Clair | Clair / sombre |
 | Volet **Code** | **Masqué** | L'app démarre en mode aperçu ; réafficher le volet le mémorise |
 | **Panneau latéral** | Visible | Réductible via ☰, état retenu |
+| Largeur du panneau | 240 px | Réglée en glissant son bord droit (140 px au minimum) |
+| Mode d'affichage | Continu | Continu, A4 une page ou A4 deux pages |
 
 La fenêtre s'ouvre **maximisée** au démarrage.
 

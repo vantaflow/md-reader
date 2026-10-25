@@ -122,3 +122,11 @@ test('table de raccourcis : affichage et touche CodeMirror', () => {
   assert.strictEqual(raccourcis.toucheEditeur('format:titre2'), 'Mod-Alt-2');
   assert.strictEqual(raccourcis.toucheEditeur('format:saut-page'), 'Mod-Enter');
 });
+
+test('Fichier : « Exporter en Word… » envoie la commande export:docx', () => {
+  envoyes.length = 0;
+  const entree = menu(base('win32'), 'Fichier').submenu.find((i) => i.label === 'Exporter en Word…');
+  assert.ok(entree, 'entrée absente');
+  entree.click();
+  assert.deepStrictEqual(envoyes[0], ['menu:commande', 'export:docx']);
+});

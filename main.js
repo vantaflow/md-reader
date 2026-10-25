@@ -561,6 +561,32 @@ async function inlineLocalImages(html) {
   return html;
 }
 
+// Export Word : le renderer fournit les octets du .docx, le chemin est choisi
+// par l'utilisateur dans la boîte d'enregistrement.
+ipcMain.handle('file:export-docx', async (_e, { octets, defaultName }) => {
+  if (!octets || !octets.length) return null;
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    filters: [{ name: 'Document Word', extensions: ['docx'] }],
+    defaultPath: (defaultName || 'document') + '.docx',
+  });
+  if (canceled || !filePath) return null;
+  await fs.writeFile(filePath, Buffer.from(octets));
+  return filePath;
+});
+
+// Lecture d'une image locale (file://) pour l'export Word : extensions d'image
+// uniquement, jamais un autre type de fichier.
+const MIME_IMAGES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp' };
+ipcMain.handle('image:lire', async (_e, url) => {
+  try {
+    if (typeof url !== 'string' || !/^file:/i.test(url)) return null;
+    const chemin = require('url').fileURLToPath(url);
+    const mime = MIME_IMAGES[path.extname(chemin).slice(1).toLowerCase()];
+    if (!mime) return null;
+    return { octets: await fs.readFile(chemin), mime };
+  } catch { return null; }
+});
+
 ipcMain.handle('file:export-html', async (_e, { html, defaultName }) => {
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     filters: [{ name: 'HTML', extensions: ['html'] }],

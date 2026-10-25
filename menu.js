@@ -90,6 +90,7 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         { type: 'separator' },
         depuisTable('export:pdf', canal('menu:export')),
         depuisTable('export:html', canal('menu:export-html')),
+        { label: 'Exporter en Word…', click: commande('export:docx') },
         depuisTable('export:imprimer', canal('menu:print')),
         { type: 'separator' },
         { label: 'Définir comme lecteur Markdown par défaut', click: canal('menu:set-default') },

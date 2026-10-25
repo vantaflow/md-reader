@@ -15,3 +15,4 @@ build/icon.iconset/
 .superpowers/
 .autopilot/
 .worktrees/
+renderer/docx-bundle.js

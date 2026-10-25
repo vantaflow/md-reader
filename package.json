@@ -4,12 +4,12 @@
   "description": "Markdown editor with PDF export for macOS and Windows",
   "main": "main.js",
   "scripts": {
-    "bundle": "esbuild renderer/editor-src.js --bundle --outfile=renderer/editor-bundle.js --format=iife --minify && esbuild renderer/markdown-src.js --bundle --outfile=renderer/markdown-bundle.js --format=iife --minify",
+    "bundle": "esbuild renderer/editor-src.js --bundle --outfile=renderer/editor-bundle.js --format=iife --minify && esbuild renderer/markdown-src.js --bundle --outfile=renderer/markdown-bundle.js --format=iife --minify && esbuild renderer/docx-src.js --bundle --outfile=renderer/docx-bundle.js --format=iife --minify",
     "start": "npm run bundle && electron .",
     "build": "npm run bundle && electron-builder",
     "build:mac": "npm run bundle && electron-builder --mac",
     "build:win": "npm run bundle && electron-builder --win",
-    "test": "npm run bundle && node --test test/markdown.test.js test/pdf.test.js test/packaging.test.js test/settings.test.js test/format.test.js test/menu.test.js && electron test/smoke.js && electron test/smoke-lot1.js"
+    "test": "npm run bundle && node --test test/markdown.test.js test/pdf.test.js test/packaging.test.js test/settings.test.js test/format.test.js test/menu.test.js && electron test/smoke.js && electron test/smoke-lot1.js && electron test/smoke-docx.js"
   },
   "author": "",
   "license": "MIT",
@@ -30,6 +30,7 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.41.1",
     "chokidar": "^3.6.0",
+    "docx": "^9.14.0",
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.45",
@@ -82,7 +83,13 @@
       "icon": "build/icon.icns",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "target": [
-        { "target": "dmg", "arch": ["arm64", "x64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "category": "public.app-category.productivity",
       "identity": null,
@@ -92,8 +99,15 @@
             "CFBundleTypeName": "Markdown File",
             "CFBundleTypeRole": "Editor",
             "LSHandlerRank": "Default",
-            "LSItemContentTypes": ["net.daringfireball.markdown", "public.plain-text"],
-            "CFBundleTypeExtensions": ["md", "markdown", "txt"]
+            "LSItemContentTypes": [
+              "net.daringfireball.markdown",
+              "public.plain-text"
+            ],
+            "CFBundleTypeExtensions": [
+              "md",
+              "markdown",
+              "txt"
+            ]
           }
         ]
       }
@@ -101,7 +115,12 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {

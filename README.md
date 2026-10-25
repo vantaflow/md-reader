@@ -1,6 +1,6 @@
 # 📕 MD Reader
 
-> Éditeur Markdown de bureau, multi-plateforme (macOS & Windows), avec aperçu en temps réel, export **PDF** & **HTML**, coloration syntaxique, **KaTeX**, **Mermaid** et thème clair/sombre.
+> Éditeur Markdown de bureau, multi-plateforme (macOS & Windows), avec aperçu en temps réel, export **PDF**, **HTML** & **Word**, coloration syntaxique, **KaTeX**, **Mermaid** et thème clair/sombre.
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue)
 ![Electron](https://img.shields.io/badge/Electron-32-47848F?logo=electron&logoColor=white)
@@ -34,9 +34,14 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 
 ### Édition
 - **Éditeur CodeMirror 6** : coloration Markdown, numéros de ligne, pliage de titres, multi-curseurs, recherche intégrée (`Cmd/Ctrl+F`)
-- **Raccourcis de formatage** : gras, italique, lien, souligné (`Cmd/Ctrl` + `B` / `I` / `K` / `U`)
+- **Barre de mise en forme** au-dessus de l'éditeur : gras, italique, barré, titres 1 à 3, listes à puces, numérotées et de tâches, lien, image, tableau, bloc de code, citation, saut de page. Les mêmes actions existent dans le menu **Format**, dans la palette et au clavier ; la barre se masque dans les réglages ou le menu Affichage
+- **Raccourcis de formatage** : gras (`Cmd/Ctrl+B`), italique (`I`), souligné (`U`), lien (`K`), barré (`Shift+X`), titres (`Alt+1` à `Alt+3`), listes (`Shift+8` / `7` / `9`), image (`Shift+I`), tableau (`Alt+T`), bloc de code (`Alt+C`), citation (`Shift+.`), saut de page (`Entrée`)
+- **Images collées ou glissées** : une capture collée ou une image déposée dans l'éditeur est copiée dans un dossier `images/` à côté du document (nom horodaté, ou nom d'origine sans jamais écraser un fichier existant) et le lien `![](images/nom.png)` est inséré. Si le document n'est pas encore enregistré, l'application propose de l'enregistrer d'abord. Formats : PNG, JPEG, GIF, WebP, SVG, 25 Mo au plus ; l'écriture reste bornée au dossier du document
+- **Fenêtre Réglages** (`Cmd/Ctrl+,`, menu, palette) : police, taille, retour à la ligne, numéros de ligne, tabulation et barre d'outils de l'éditeur ; mode d'affichage par défaut, police et taille de l'aperçu, marges des feuilles A4, thème clair / sombre / système ; valeurs par défaut de l'export PDF ; enregistrement automatique et son délai, synchronisation du défilement, réouverture des onglets au démarrage. Tout s'applique immédiatement
 - **Palette de commandes** (`Cmd/Ctrl+Shift+P`) : toutes les actions de l'application, joignables au clavier, avec recherche floue
 - **Mode focus** : masque l'habillage et centre le texte sur une largeur de lecture ; `Échap` en sort, ou ferme d'abord la palette de commandes si elle est ouverte
+- **Aperçu seul plein écran** (`Cmd/Ctrl+Shift+F`) : éditeur, panneau et en-tête masqués, l'aperçu occupe toute la fenêtre
+- **Éditeur seul sans distraction** (`Cmd/Ctrl+Shift+D`) : l'éditeur seul, centré, sans autre élément ; `Échap` quitte ces deux modes
 - **Front-matter YAML** reconnu et masqué de l'aperçu (`--- title: … ---`)
 - **Statistiques live** : nombre de mots, de caractères et temps de lecture estimé
 
@@ -60,7 +65,10 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Explorateur de dossiers** avec arborescence repliable
 - **Recherche plein-texte** dans tous les `.md` d'un dossier
 - **Surveillance de fichier** : rechargement si le fichier est modifié hors de l'application
-- **Enregistrement automatique** optionnel (autosave 2 s après la dernière modification)
+- **Enregistrement automatique** optionnel (délai réglable, 2 s par défaut)
+- **Menus natifs complets** : Fichier (Ouvrir récent, Enregistrer sous…, Dupliquer, exports), Édition, Format, Affichage (modes d'affichage, thème, zoom de l'interface, panneau latéral, éditeur seul / aperçu seul, plein écran, focus), Fenêtre et Aide (aide-mémoire Markdown, raccourcis clavier, À propos avec la version)
+- **Documents récents** : les 10 derniers, sous Fichier → Ouvrir récent, avec « Effacer la liste »
+- **Onglets rouverts au démarrage** (réglage activable)
 - **Ouverture depuis le système** : double-clic sur un `.md` dans le Finder / l'Explorateur, ou « Ouvrir avec »
 - **Lecteur Markdown par défaut** en un clic (macOS) — voir plus bas
 
@@ -75,6 +83,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Pagination soignée** : jamais de titre orphelin en bas de page, ni de tableau, bloc de code, formule ou diagramme coupé en deux
 - **Options mémorisées** d'un export à l'autre
 - **Impression directe** (`Cmd/Ctrl+P`) vers l'imprimante système
+- **Export Word (.docx)** : titres, paragraphes, gras / italique / code / liens, listes imbriquées, tableaux, images (locales ou intégrées), blocs de code, citations et filets ; menu Fichier ou palette « Exporter en Word (.docx) »
 - **Export HTML** autonome : styles **et images** embarqués (data URI), le fichier reste lisible une fois envoyé à quelqu'un d'autre
 - **Export par lot** : un dossier entier converti en PDF, un fichier à la fois, chaque PDF écrit à côté de son source. L'export refuse de démarrer si un onglet porte des modifications non enregistrées, pour ne jamais produire un PDF divergent de ce qui est affiché. Le message final compte les PDF écrits, ceux qui remplaçaient un PDF existant, et signale en conflit tout fichier dont le PDF cible était déjà pris par un autre (par exemple `note.md` et `note.markdown` visant le même `note.pdf` : le fichier gardé est celui qui vient en premier dans l'ordre alphabétique — ici `note.markdown` avant `note.md` — l'autre est ignoré et compté en conflit). Sa progression s'affiche dans la barre d'outils et dans une notification dédiée qui reste visible même en mode focus
 - Les exports reprennent l'aperçu tel quel — KaTeX déjà composé, diagrammes déjà rendus en SVG
@@ -105,6 +114,8 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 | Continu / A4 · 1 page / A4 · 2 pages | Mode d'affichage de l'aperçu |
 | 🌓 | Basculer le thème clair / sombre |
 
+Les réglages complets s'ouvrent avec `Cmd/Ctrl+,`.
+
 **Panneau latéral** — sa largeur se règle en glissant son bord droit (double-clic pour revenir à la largeur par défaut). Trois onglets :
 
 - **Menu** — table des matières navigable, générée depuis les titres du document
@@ -117,7 +128,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 
 MD Reader peut s'enregistrer comme application par défaut pour les fichiers Markdown (`.md`, `.markdown`, `.mdown`, `.mkd`).
 
-- **macOS** : cliquez sur **⭐ Défaut** dans la barre d'outils (ou menu **File → Set as Default Markdown Reader**). L'app utilise `NSWorkspace.setDefaultApplication` via le compilateur Swift système — **aucune dépendance tierce**. Fonctionne uniquement sur **l'application installée** (pas en mode `npm start`).
+- **macOS** : cliquez sur **⭐ Défaut** dans la barre d'outils (ou menu **Fichier → Définir comme lecteur Markdown par défaut**). L'app utilise `NSWorkspace.setDefaultApplication` via le compilateur Swift système — **aucune dépendance tierce**. Fonctionne uniquement sur **l'application installée** (pas en mode `npm start`).
 - Une fois défini, un double-clic sur un `.md` dans le Finder ouvre le fichier dans un nouvel onglet.
 
 > Les associations de fichiers sont déclarées dans `package.json` (`build.fileAssociations`) et, pour macOS, dans `build.mac.extendInfo.CFBundleDocumentTypes`.
@@ -126,15 +137,19 @@ MD Reader peut s'enregistrer comme application par défaut pour les fichiers Mar
 
 ## 💾 Préférences mémorisées
 
-Ces réglages sont conservés d'une session à l'autre (via `localStorage`) :
+Ces réglages sont conservés d'une session à l'autre, dans un magasin unique (`localStorage`, clé `reglages`, migré depuis les anciennes clés) et modifiables dans la fenêtre Réglages. Les documents récents sont mémorisés à part, dans le dossier de données de l'application :
 
 | Préférence | Défaut | Détail |
 |---|---|---|
-| Thème | Clair | Clair / sombre |
+| Thème | Clair | Clair, sombre ou système |
 | Volet **Code** | **Masqué** | L'app démarre en mode aperçu ; réafficher le volet le mémorise |
 | **Panneau latéral** | Visible | Réductible via ☰, état retenu |
 | Largeur du panneau | 240 px | Réglée en glissant son bord droit (140 px au minimum) |
-| Mode d'affichage | Continu | Continu, A4 une page ou A4 deux pages |
+| Mode d'affichage | A4 une page | Continu, A4 une page ou A4 deux pages |
+| Éditeur | Police et taille, retour à la ligne, numéros de ligne, tabulation, barre d'outils | Voir Réglages → Éditeur |
+| Aperçu | Police, taille, marges des feuilles A4 | Voir Réglages → Aperçu |
+| Export PDF | Format, orientation, marges, numéros de page, page de garde, filigrane | La modale d'export s'ouvre pré-remplie |
+| Général | Enregistrement automatique et délai, synchro du défilement, onglets rouverts | Voir Réglages → Général |
 
 La fenêtre s'ouvre **maximisée** au démarrage.
 
@@ -144,10 +159,12 @@ La fenêtre s'ouvre **maximisée** au démarrage.
 
 | Action | Raccourci |
 |---|---|
+| Réglages | `Cmd/Ctrl+,` |
 | Nouvel onglet | `Cmd/Ctrl+N` |
 | Ouvrir fichier | `Cmd/Ctrl+O` |
 | Ouvrir dossier | `Cmd/Ctrl+Shift+O` |
 | Enregistrer | `Cmd/Ctrl+S` |
+| Enregistrer sous… | `Cmd/Ctrl+Shift+S` |
 | Fermer onglet | `Cmd/Ctrl+W` |
 | Export PDF | `Cmd/Ctrl+E` |
 | Export HTML | `Cmd/Ctrl+Shift+E` |
@@ -160,6 +177,21 @@ La fenêtre s'ouvre **maximisée** au démarrage.
 | *Italique* | `Cmd/Ctrl+I` |
 | Lien | `Cmd/Ctrl+K` |
 | Souligné | `Cmd/Ctrl+U` |
+| Barré | `Cmd/Ctrl+Shift+X` |
+| Titre 1 / 2 / 3 | `Cmd/Ctrl+Alt+1` / `2` / `3` |
+| Liste à puces / numérotée / de tâches | `Cmd/Ctrl+Shift+8` / `7` / `9` |
+| Image | `Cmd/Ctrl+Shift+I` |
+| Tableau | `Cmd/Ctrl+Alt+T` |
+| Bloc de code | `Cmd/Ctrl+Alt+C` |
+| Citation | `Cmd/Ctrl+Shift+.` |
+| Saut de page | `Cmd/Ctrl+Enter` |
+| Aperçu seul plein écran | `Cmd/Ctrl+Shift+F` |
+| Éditeur seul sans distraction | `Cmd/Ctrl+Shift+D` |
+| Zoom de l'interface | `Cmd/Ctrl+Plus` / `-` / `0` |
+| Outils de développement | `F12` (macOS : `Alt+Cmd+I`) |
+| Quitter un mode plein écran, focus ou une modale | `Échap` |
+
+La liste complète est aussi dans **Aide → Raccourcis clavier**, générée depuis la table unique `renderer/lib/raccourcis.js`.
 
 ---
 
@@ -254,8 +286,10 @@ Le push d'un tag `v*` déclenche le build multi-OS et attache les artefacts à l
 
 ```
 md-to-pdf-app/
-├── main.js                     # Process principal Electron (IPC, fenêtres, export PDF/HTML,
-│                               #   ouverture système, lecteur par défaut)
+├── main.js                     # Process principal Electron (IPC, fenêtres, export PDF/HTML/Word,
+│                               #   ouverture système, documents récents, lecteur par défaut)
+├── menu.js                     # Gabarit des menus natifs et liste des documents récents (sans Electron)
+├── images.js                   # Enregistrement borné des images collées dans images/ (sans Electron)
 ├── preload.js                  # Bridge contextIsolation entre main et renderer
 ├── pdf.js                      # Options de rendu, lecture des destinations d'un PDF,
 │                               #   remplissage des numéros de page (sans Electron)
@@ -263,6 +297,19 @@ md-to-pdf-app/
 │   ├── index.html              # Shell de l'UI
 │   ├── styles.css              # Thèmes clair/sombre, layout en grille
 │   ├── commands.js             # Registre des commandes lu par la palette (boutons/menus/accélérateurs restent câblés séparément)
+│   ├── lib/                    # Logique pure, testable sans Electron :
+│   │   ├── settings.js         #   magasin des réglages (valeurs par défaut, migration, onChange)
+│   │   ├── raccourcis.js       #   table unique des raccourcis (menus, aide, éditeur)
+│   │   └── format.js           #   mise en forme Markdown (gras, titres, listes, tableau…)
+│   ├── features/               # Fonctions de l'interface, chargées avant renderer.js :
+│   │   ├── reglages.js         #   fenêtre Réglages
+│   │   ├── format.js           #   commandes Format et barre d'outils
+│   │   ├── aide.js             #   aide-mémoire, raccourcis, À propos
+│   │   ├── export-docx.js      #   export Word
+│   │   ├── modes.js            #   aperçu seul plein écran, éditeur sans distraction
+│   │   └── images.js           #   images collées ou glissées
+│   ├── docx-src.js             # Conversion HTML vers .docx (bibliothèque docx, bundlée par esbuild)
+│   ├── docx-bundle.js          # Bundle généré (ignoré par git)
 │   ├── editor-src.js           # Source CodeMirror 6 (bundlée par esbuild)
 │   ├── editor-bundle.js        # Bundle généré (ignoré par git)
 │   ├── markdown/               # Moteur de rendu : parse.js, enhance.js, labels.js, icons.js
@@ -277,7 +324,16 @@ md-to-pdf-app/
 ├── test/markdown.test.js       # Tests unitaires du moteur Markdown, sans Electron
 ├── test/pdf.test.js            # Tests unitaires de la chaîne PDF, sans Electron
 ├── test/packaging.test.js      # Cohérence du manifeste et du verrou de dépendances
+├── test/settings.test.js       # Réglages : défauts, migration, validation
+├── test/format.test.js         # Mise en forme Markdown
+├── test/menu.test.js           # Menus, raccourcis, documents récents
+├── test/images.test.js         # Images collées : noms, collisions, écriture bornée
+├── test/helpers.js             # Aide commune aux tests Electron (fenêtre invisible, check)
 ├── test/smoke.js               # Test de fumée end-to-end, sous Electron
+├── test/smoke-lot1.js          # Réglages, menus, barre de mise en forme, préférences
+├── test/smoke-docx.js          # Export Word
+├── test/smoke-focus.js         # Modes aperçu seul et éditeur sans distraction
+├── test/smoke-images.js        # Images collées et glissées
 ├── .github/workflows/ci.yml        # CI : test de fumée macOS / Linux / Windows
 ├── .github/workflows/release.yml   # CI : build & publication des installateurs
 ├── installer.iss               # Script Inno Setup (installateur Windows alternatif)
@@ -313,8 +369,8 @@ boîte d'impression système, pour que son sommaire porte lui aussi ses numéros
 | Script | Description |
 |---|---|
 | `npm start` | Bundle le renderer + lance l'app en dev |
-| `npm run bundle` | Bundle `renderer/editor-src.js` et `renderer/markdown-src.js` vers `editor-bundle.js` et `markdown-bundle.js` (esbuild, minifié) |
-| `npm test` | Tests unitaires du moteur Markdown, de la chaîne PDF et de l'empaquetage (`node --test`, sans Electron) puis test de fumée end-to-end sous Electron |
+| `npm run bundle` | Bundle `renderer/editor-src.js`, `renderer/markdown-src.js` et `renderer/docx-src.js` vers `editor-bundle.js`, `markdown-bundle.js` et `docx-bundle.js` (esbuild, minifié) |
+| `npm test` | Tests unitaires (moteur Markdown, chaîne PDF, empaquetage, réglages, mise en forme, menus, images ; `node --test`, sans Electron) puis tests de fumée end-to-end sous Electron (`smoke`, `smoke-lot1`, `smoke-docx`, `smoke-focus`, `smoke-images`), tous sans fenêtre visible |
 | `npm run build` | Build des installateurs pour la plateforme courante |
 | `npm run build:mac` | Build `.dmg` (arm64 + x64) |
 | `npm run build:win` | Build installateur NSIS |
@@ -332,7 +388,7 @@ boîte d'impression système, pour que son sommaire porte lui aussi ses numéros
 → Vérifiez que `npm run bundle` a bien généré `renderer/editor-bundle.js`, puis relancez `npm start`.
 
 **Export PDF vide ou mal rendu**
-→ Ouvrez les DevTools (`Cmd/Ctrl+Shift+I`) et vérifiez la console de l'aperçu. Les ressources KaTeX/Mermaid doivent être chargées.
+→ Ouvrez les DevTools (`F12`, ou `Alt+Cmd+I` sous macOS) et vérifiez la console de l'aperçu. Les ressources KaTeX/Mermaid doivent être chargées.
 
 **Le bouton ⭐ Défaut ne fait rien / renvoie une erreur**
 → La fonction n'est disponible que sur **l'application installée** (pas en `npm start`). Sur macOS, autorisez l'app dans **Réglages Système → Confidentialité et sécurité** si Gatekeeper l'a bloquée.

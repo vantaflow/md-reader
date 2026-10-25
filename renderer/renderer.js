@@ -75,6 +75,8 @@ function initEditor() {
     },
     onScroll: (dom) => syncScroll(dom, preview),
     onCursor: ({ line, col }) => { cursorEl.textContent = `Ln ${line} · Col ${col}`; },
+    // Touches de mise en forme (features/format.js), prioritaires sur celles de CodeMirror.
+    raccourcis: window.mdr && window.mdr.format ? window.mdr.format.raccourcisEditeur : [],
   });
 }
 
@@ -109,8 +111,11 @@ async function restaurerOnglets() {
   memoriserOnglets();
 }
 
-function newTab({ path = null, content = '' } = {}) {
-  const t = { id: Date.now() + Math.random(), path, content, dirty: false };
+// Nom affiché d'un onglet : fichier, sinon titre donné (« Copie de … »), sinon « Sans titre ».
+function nomOnglet(t) { return t.path ? t.path.split(/[\\/]/).pop() : (t.titre || 'Sans titre'); }
+
+function newTab({ path = null, content = '', titre = null } = {}) {
+  const t = { id: Date.now() + Math.random(), path, content, dirty: false, titre };
   tabs.push(t);
   setActiveTab(t);
   return t;
@@ -118,6 +123,8 @@ function newTab({ path = null, content = '' } = {}) {
 
 // Ouvre un fichier : réutilise un onglet "Sans titre" vierge (ex. l'accueil) au lieu d'en empiler un nouveau
 function openInTab({ path, content }) {
+  // Le processus principal tient la liste des documents récents.
+  if (path && restaurationOnglets && window.api.noterRecent) window.api.noterRecent(path).catch(() => {});
   const existing = tabs.find(t => t.path === path);
   if (existing) { setActiveTab(existing); return existing; }
   const pristine = tabs.find(t => !t.path && !t.dirty);
@@ -138,7 +145,7 @@ function setActiveTab(t) {
   suppressChange = true;
   editor.setValue(t.content);
   suppressChange = false;
-  fileNameEl.textContent = t.path ? t.path.split(/[\\/]/).pop() : 'Sans titre';
+  fileNameEl.textContent = nomOnglet(t);
   render();
   renderTabs();
   window.api.watchFile(t.path || null);
@@ -166,7 +173,7 @@ function renderTabs() {
   for (const t of tabs) {
     const el = document.createElement('div');
     el.className = 'tab' + (t === activeTab ? ' active' : '');
-    const name = t.path ? t.path.split(/[\\/]/).pop() : 'Sans titre';
+    const name = nomOnglet(t);
     el.innerHTML = `${t.dirty ? '<span class="dot">●</span>' : ''}<span>${escapeHtml(name)}</span><span class="close">✕</span>`;
     el.addEventListener('click', (e) => {
       if (e.target.classList.contains('close')) closeTab(t);
@@ -281,12 +288,17 @@ async function openFile() {
   for (const f of res) openInTab({ path: f.path, content: f.content });
 }
 
-async function saveFile() {
+// `sous` : « Enregistrer sous… » — toujours la boîte de dialogue, même pour un fichier existant.
+async function saveFile({ sous = false } = {}) {
   if (!activeTab) return;
   // L'onglet de travail d'un lot vise le fichier source en cours de
   // traitement : l'enregistrer écrirait dedans par-dessus le lot lui-même.
   if (activeTab === tabDuLot) return;
-  const saved = await window.api.saveFile({ filePath: activeTab.path, content: editor.getValue() });
+  const saved = await window.api.saveFile({
+    filePath: sous ? null : activeTab.path,
+    content: editor.getValue(),
+    defaultPath: sous ? nomOnglet(activeTab).replace(/^Sans titre$/, 'document.md') : undefined,
+  });
   if (saved) {
     activeTab.path = saved;
     activeTab.content = editor.getValue();
@@ -727,19 +739,10 @@ document.addEventListener('keydown', (e) => {
   if (!editor || !editorParent.contains(document.activeElement)) return;
   const mod = e.metaKey || e.ctrlKey;
   if (!mod) return;
-  if (e.key === 'b') { e.preventDefault(); editor.wrapSelection('**', '**'); }
-  else if (e.key === 'i' && !e.shiftKey) { e.preventDefault(); editor.wrapSelection('*', '*'); }
-  else if (e.key === 'k' && !e.shiftKey) { e.preventDefault(); wrapLink(); }
-  else if (e.key === 'u' && !e.shiftKey) { e.preventDefault(); editor.wrapSelection('<u>', '</u>'); }
-  else if (['1','2','3','4','5','6'].includes(e.key) && e.altKey) { e.preventDefault(); editor.prefixLine('#'.repeat(+e.key) + ' '); }
+  // Gras, italique, souligné, lien et titres 1-3 sont gérés par features/format.js
+  // (touches CodeMirror prioritaires + menu Format) : ne reste ici que les titres 4-6.
+  if (['4','5','6'].includes(e.key) && e.altKey) { e.preventDefault(); editor.prefixLine('#'.repeat(+e.key) + ' '); }
 });
-
-function wrapLink() {
-  const url = prompt('URL:', 'https://');
-  if (url === null) return;
-  const sel = window.getSelection()?.toString() || 'texte';
-  editor.wrapSelection('[', `](${url})`);
-}
 
 // ---------- Drag & drop ----------
 let dropOverlay;
@@ -1021,6 +1024,9 @@ window.api.onMenu('menu:print', doPrint);
 window.api.onMenu('menu:toggle-editor', () => { toggleEditor.checked = !toggleEditor.checked; toggleEditor.dispatchEvent(new Event('change')); });
 window.api.onMenu('menu:toggle-theme', () => document.getElementById('btn-theme').click());
 window.api.onMenu('menu:set-default', setDefaultReader);
+// Canal générique des nouveaux menus (Format, Affichage, Aide, Fichier) : l'identifiant
+// est celui d'une commande du registre.
+window.api.onMenu('menu:commande', (_e, id) => { if (typeof id === 'string') window.commands.run(id); });
 
 // ---------- Application des réglages à chaud ----------
 function appliquerEditeur() {
@@ -1064,6 +1070,8 @@ function appliquerReglage(cle, valeur) {
     case 'synchroDefilement': if (toggleSync.checked !== valeur) toggleSync.checked = valeur; break;
     case 'voletCode':
       if (toggleEditor.checked !== valeur) toggleEditor.checked = valeur;
+      // Volet code masqué : « éditeur seul » n'a plus de sens, l'aperçu revient.
+      if (!valeur) mainEl.classList.remove('no-preview');
       mainEl.classList.toggle('no-editor', !valeur);
       break;
     case 'panneauLateral': mainEl.classList.toggle('no-sidebar', !valeur); break;
@@ -1259,7 +1267,32 @@ for (const c of [
   { id: 'vue:continu', titre: 'Affichage continu', executer: () => choisirModeAffichage('continu') },
   { id: 'vue:a4', titre: 'Affichage A4, une page', executer: () => choisirModeAffichage('a4') },
   { id: 'vue:a4-double', titre: 'Affichage A4, deux pages côte à côte', executer: () => choisirModeAffichage('a4-double') },
+  { id: 'fichier:enregistrer-sous', titre: 'Enregistrer sous…', raccourci: `${MOD}+Shift+S`, executer: () => saveFile({ sous: true }) },
+  { id: 'fichier:dupliquer', titre: 'Dupliquer le document dans un nouvel onglet', executer: dupliquerDocument },
+  { id: 'vue:theme-clair', titre: 'Thème clair', executer: () => reglages.set('theme', 'clair') },
+  { id: 'vue:theme-sombre', titre: 'Thème sombre', executer: () => reglages.set('theme', 'sombre') },
+  { id: 'vue:theme-systeme', titre: 'Thème du système', executer: () => reglages.set('theme', 'systeme') },
+  { id: 'vue:editeur-seul', titre: 'Éditeur seul', executer: () => definirDisposition('editeur') },
+  { id: 'vue:apercu-seul', titre: 'Aperçu seul', executer: () => definirDisposition('apercu') },
+  { id: 'vue:deux', titre: 'Éditeur et aperçu côte à côte', executer: () => definirDisposition('deux') },
+  { id: 'vue:barre-outils', titre: 'Afficher ou masquer la barre d’outils de mise en forme', executer: () => reglages.set('barreOutils', !reglages.get('barreOutils')) },
 ]) window.commands.register(c);
+
+// Copie du document actif dans un nouvel onglet non enregistré « Copie de … ».
+function dupliquerDocument() {
+  if (!activeTab || !editor) return;
+  const contenu = editor.getValue();
+  const t = newTab({ content: contenu, titre: 'Copie de ' + nomOnglet(activeTab) });
+  markDirty();
+  return t;
+}
+
+// Disposition des volets : éditeur seul, aperçu seul, ou les deux.
+function definirDisposition(mode) {
+  reglages.set('voletCode', mode !== 'apercu');
+  mainEl.classList.toggle('no-preview', mode === 'editeur');
+  if (mode !== 'apercu') paginer();
+}
 
 // ---------- Mode focus ----------
 // Volontairement non mémorisé : on entre en mode focus pour une session de
@@ -1285,6 +1318,11 @@ document.addEventListener('keydown', (e) => {
   if (window.mdr.reglagesUI.estOuvert()) {
     e.stopPropagation();
     window.mdr.reglagesUI.fermer();
+    return;
+  }
+  if (window.mdr.aideUI && window.mdr.aideUI.estOuvert()) {
+    e.stopPropagation();
+    window.mdr.aideUI.fermer();
     return;
   }
   if (!pdfModal.classList.contains('hidden')) {

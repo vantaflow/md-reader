@@ -49,6 +49,10 @@ main { --largeur-panneau: 240px; flex: 1; display: grid; grid-template-columns: 
 main > * { min-width: 0; }
 main.no-editor { grid-template-columns: var(--largeur-panneau) 1fr; }
 main.no-editor #editor { display: none; }
+main.no-preview { grid-template-columns: var(--largeur-panneau) 1fr; }
+main.no-preview #preview { display: none; }
+main.no-preview.no-sidebar { grid-template-columns: 1fr; }
+main.no-preview #editor { border-right: none; }
 main.no-sidebar { grid-template-columns: 1fr 1fr; }
 main.no-sidebar #sidebar { display: none; }
 main.no-sidebar.no-editor { grid-template-columns: 1fr; }
@@ -97,9 +101,9 @@ body.redimensionnement { cursor: col-resize; user-select: none; }
 
 #editor {
   border-right: 1px solid var(--border); background: var(--bg-alt); color: var(--fg);
-  overflow: hidden; display: flex;
+  overflow: hidden; display: flex; flex-direction: column;
 }
-#editor .cm-editor { flex: 1; height: 100%; outline: none; }
+#editor .cm-editor { flex: 1; min-height: 0; outline: none; }
 #editor .cm-editor.cm-focused { outline: none; }
 
 /* Police, taille et marges A4 viennent des réglages (variables posées par renderer.js). */
@@ -462,5 +466,20 @@ body.focus #preview {
 .reglages-onglets button.actif { color: var(--fg); border-bottom-color: var(--accent); }
 .reglages-panneau { display: none; }
 .reglages-panneau.actif { display: block; }
-/* Barre d'outils de mise en forme masquée par le réglage (tâche 3). */
+/* Barre d'outils de mise en forme, au-dessus de l'éditeur ; masquée par le réglage. */
+#barre-format { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 4px 8px; border-bottom: 1px solid var(--border); background: var(--bg); flex: none; }
+#barre-format .groupe { display: inline-flex; gap: 2px; }
+#barre-format button { padding: 3px 8px; font-size: 12px; border: 1px solid transparent; border-radius: 4px; background: none; color: var(--fg); cursor: pointer; }
+#barre-format button:hover { background: var(--bg-alt); border-color: var(--border); }
+#barre-format .b-gras { font-weight: 700; }
+#barre-format .b-italique { font-style: italic; }
+#barre-format .b-barre { text-decoration: line-through; }
 body.sans-barre-outils #barre-format { display: none; }
+
+/* Modales d'aide (aide-mémoire, raccourcis, à propos) */
+.modal-content.aide { width: min(640px, 92vw); max-height: 86vh; overflow: auto; }
+.modal-content.aide table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
+.modal-content.aide td, .modal-content.aide th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.modal-content.aide kbd, .modal-content.aide code { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-size: 12px; white-space: pre-wrap; }
+.modal-content.aide h4 { margin: 14px 0 4px; }
+.modal-content.aide a { color: var(--accent); cursor: pointer; text-decoration: underline; }

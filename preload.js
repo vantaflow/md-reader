@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('api', {
   exportHtml: (payload) => ipcRenderer.invoke('file:export-html', payload),
   print: (payload) => ipcRenderer.invoke('file:print', payload),
   setDefaultMarkdown: () => ipcRenderer.invoke('app:set-default-md'),
+  version: () => ipcRenderer.invoke('app:version'),
+  ouvrirDepot: () => ipcRenderer.invoke('app:open-repo'),
+  noterRecent: (chemin) => ipcRenderer.invoke('recent:add', chemin),
   onMenu: (channel, handler) => ipcRenderer.on(channel, handler),
   // Menu « Réglages… » (Cmd/Ctrl+,) : ouvre la modale de réglages.
   onSettings: (handler) => ipcRenderer.on('menu:settings', handler),

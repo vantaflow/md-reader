@@ -5,6 +5,10 @@ const path = require('path');
 const { spawn } = require('child_process');
 const chokidar = require('chokidar');
 const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
+const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
+
+// Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
+const URL_DEPOT = 'https://github.com/vantaflow/md-to-pdf-app';
 
 let mainWindow;
 let watcher = null;
@@ -24,12 +28,58 @@ const MD_EXT_RE = new RegExp('\\.(' + MD_EXTENSIONS.join('|') + '|txt)$', 'i');
 let pendingFiles = [];
 let rendererReady = false;
 
+// ─── Documents récents ──────────────────────────────────────────────────────
+// Liste des 10 derniers documents, mémorisée dans le dossier userData et
+// mise à jour à chaque ouverture ou enregistrement ; le menu est reconstruit
+// à chaque changement.
+let recents = [];
+
+function fichierRecents() { return path.join(app.getPath('userData'), 'recents.json'); }
+
+function chargerRecents() {
+  try { recents = assainirRecents(JSON.parse(require('fs').readFileSync(fichierRecents(), 'utf8'))); }
+  catch { recents = []; }
+}
+
+function memoriserRecents() {
+  fs.writeFile(fichierRecents(), JSON.stringify(recents), 'utf8').catch(() => {});
+}
+
+function noterRecent(chemin) {
+  if (!chemin) return;
+  const avant = recents.join('\n');
+  recents = ajouterRecent(recents, chemin);
+  if (recents.join('\n') === avant) return;
+  memoriserRecents();
+  construireMenu();
+}
+
+function effacerRecents() {
+  recents = [];
+  memoriserRecents();
+  construireMenu();
+}
+
+function construireMenu() {
+  const envoyer = (canal, ...args) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(canal, ...args); };
+  const template = creerTemplate({
+    plateforme: process.platform,
+    nomApp: app.name,
+    recents,
+    envoyer,
+    ouvrirRecent: (p) => openPathInRenderer(p),
+    effacerRecents,
+  });
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 async function openPathInRenderer(filePath) {
   if (!filePath) return;
   if (!rendererReady || !mainWindow) { pendingFiles.push(filePath); return; }
   try {
     const content = await fs.readFile(filePath, 'utf8');
     mainWindow.webContents.send('file:open-external', { path: filePath, content });
+    noterRecent(filePath);
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   } catch (e) {
@@ -76,85 +126,7 @@ function createWindow() {
     flushPendingFiles();
   });
 
-  const isMac = process.platform === 'darwin';
-  const menu = Menu.buildFromTemplate([
-    ...(isMac ? [{
-      label: app.name,
-      submenu: [
-        { label: `À propos de ${app.name}`, role: 'about' },
-        { type: 'separator' },
-        { label: 'Réglages…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('menu:settings') },
-        { type: 'separator' },
-        { label: 'Services', role: 'services' },
-        { type: 'separator' },
-        { label: `Masquer ${app.name}`, role: 'hide' },
-        { label: 'Masquer les autres', role: 'hideOthers' },
-        { label: 'Tout afficher', role: 'unhide' },
-        { type: 'separator' },
-        { label: `Quitter ${app.name}`, role: 'quit' },
-      ],
-    }] : []),
-    // Le reste de l'interface est en français ; les libellés de rôles sont
-    // forcés eux aussi, sinon ils suivent la langue du système.
-    {
-      label: 'Fichier',
-      submenu: [
-        { label: 'Nouvel onglet', accelerator: 'CmdOrCtrl+N', click: () => mainWindow.webContents.send('menu:new') },
-        { label: 'Ouvrir…', accelerator: 'CmdOrCtrl+O', click: () => mainWindow.webContents.send('menu:open') },
-        { label: 'Ouvrir un dossier…', accelerator: 'CmdOrCtrl+Shift+O', click: () => mainWindow.webContents.send('menu:open-folder') },
-        { type: 'separator' },
-        { label: 'Enregistrer', accelerator: 'CmdOrCtrl+S', click: () => mainWindow.webContents.send('menu:save') },
-        { label: 'Fermer l\'onglet', accelerator: 'CmdOrCtrl+W', click: () => mainWindow.webContents.send('menu:close-tab') },
-        { type: 'separator' },
-        { label: 'Exporter en PDF…', accelerator: 'CmdOrCtrl+E', click: () => mainWindow.webContents.send('menu:export') },
-        { label: 'Exporter en HTML…', accelerator: 'CmdOrCtrl+Shift+E', click: () => mainWindow.webContents.send('menu:export-html') },
-        { label: 'Imprimer…', accelerator: 'CmdOrCtrl+P', click: () => mainWindow.webContents.send('menu:print') },
-        { type: 'separator' },
-        { label: 'Définir comme lecteur Markdown par défaut', click: () => mainWindow.webContents.send('menu:set-default') },
-        { type: 'separator' },
-        // Sous macOS le raccourci Cmd+, vit dans le menu de l'application.
-        ...(isMac ? [] : [{ label: 'Réglages…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('menu:settings') }, { type: 'separator' }]),
-        isMac ? { label: 'Fermer la fenêtre', role: 'close' } : { label: 'Quitter', role: 'quit' },
-      ],
-    },
-    {
-      label: 'Édition',
-      submenu: [
-        { label: 'Annuler', role: 'undo' },
-        { label: 'Rétablir', role: 'redo' },
-        { type: 'separator' },
-        { label: 'Couper', role: 'cut' },
-        { label: 'Copier', role: 'copy' },
-        { label: 'Coller', role: 'paste' },
-        ...(isMac ? [{ label: 'Coller et adapter le style', role: 'pasteAndMatchStyle' }] : []),
-        { label: 'Supprimer', role: 'delete' },
-        { label: 'Tout sélectionner', role: 'selectAll' },
-      ],
-    },
-    {
-      label: 'Affichage',
-      submenu: [
-        { label: 'Afficher/masquer le volet code', accelerator: 'CmdOrCtrl+/', click: () => mainWindow.webContents.send('menu:toggle-editor') },
-        { label: 'Basculer le thème', accelerator: 'CmdOrCtrl+T', click: () => mainWindow.webContents.send('menu:toggle-theme') },
-        { type: 'separator' },
-        { label: 'Zoom avant', role: 'zoomIn' },
-        { label: 'Zoom arrière', role: 'zoomOut' },
-        { label: 'Taille réelle', role: 'resetZoom' },
-        { type: 'separator' },
-        { label: 'Recharger', role: 'reload' },
-        { label: 'Outils de développement', role: 'toggleDevTools' },
-        { label: 'Plein écran', role: 'togglefullscreen' },
-      ],
-    },
-    {
-      label: 'Fenêtre',
-      submenu: [
-        { label: 'Réduire', role: 'minimize' },
-        ...(isMac ? [{ label: 'Placer en zoom', role: 'zoom' }, { type: 'separator' }, { label: 'Tout ramener au premier plan', role: 'front' }] : []),
-      ],
-    },
-  ]);
-  Menu.setApplicationMenu(menu);
+  construireMenu();
 }
 
 // macOS : fichier ouvert via Finder / "Ouvrir avec". Peut arriver avant `ready`.
@@ -176,7 +148,7 @@ if (!gotLock) {
     for (const f of filesFromArgv(argv)) openPathInRenderer(f);
   });
 
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => { chargerRecents(); createWindow(); });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 }
@@ -287,6 +259,10 @@ async function setAsDefaultMarkdownHandler() {
 }
 
 ipcMain.handle('app:set-default-md', () => setAsDefaultMarkdownHandler());
+ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.handle('app:open-repo', () => shell.openExternal(URL_DEPOT));
+// Le renderer signale un document ouvert depuis l'arborescence ou par glisser-déposer.
+ipcMain.handle('recent:add', (_e, chemin) => { if (typeof chemin === 'string' && MD_EXT_RE.test(chemin)) noterRecent(chemin); });
 
 ipcMain.handle('file:open', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
@@ -295,7 +271,7 @@ ipcMain.handle('file:open', async () => {
   });
   if (canceled || !filePaths.length) return null;
   const files = [];
-  for (const p of filePaths) files.push({ path: p, content: await fs.readFile(p, 'utf8') });
+  for (const p of filePaths) { files.push({ path: p, content: await fs.readFile(p, 'utf8') }); noterRecent(p); }
   return files;
 });
 
@@ -304,17 +280,19 @@ ipcMain.handle('file:read', async (_e, filePath) => {
   return { path: filePath, content };
 });
 
-ipcMain.handle('file:save', async (_e, { filePath, content }) => {
+// `defaultPath` : nom proposé par « Enregistrer sous… » (aucun chemin imposé).
+ipcMain.handle('file:save', async (_e, { filePath, content, defaultPath }) => {
   let target = filePath;
   if (!target) {
     const { canceled, filePath: chosen } = await dialog.showSaveDialog(mainWindow, {
       filters: [{ name: 'Markdown', extensions: ['md'] }],
-      defaultPath: 'document.md',
+      defaultPath: defaultPath || 'document.md',
     });
     if (canceled || !chosen) return null;
     target = chosen;
   }
   await fs.writeFile(target, content, 'utf8');
+  noterRecent(target);
   return target;
 });
 

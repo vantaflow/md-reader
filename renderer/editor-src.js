@@ -35,7 +35,11 @@ const lightTheme = EditorView.theme({
 
 export function createEditor(parent, opts = {}) {
   // `raccourcis` : [{ cle: 'Mod-b', executer }] — touches de mise en forme, priorité haute.
-  const { initial = '', onChange, onScroll, onCursor, dark = false, raccourcis = [] } = opts;
+  // `onImages(fichiers, { source: 'paste'|'drop', pos })` : fichiers image collés
+  // ou déposés dans l'éditeur ; elle les prend en charge (le comportement par
+  // défaut est alors supprimé). Le texte collé n'est jamais détourné.
+  const { initial = '', onChange, onScroll, onCursor, dark = false, raccourcis = [], onImages } = opts;
+  const imagesDe = (liste) => [...(liste || [])].filter((f) => /^image\/(png|jpe?g|gif|webp|svg\+xml)$/i.test(f.type) || /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name || ''));
 
   const listener = EditorView.updateListener.of(u => {
     if (u.docChanged && onChange) onChange(u.state.doc.toString());
@@ -48,6 +52,30 @@ export function createEditor(parent, opts = {}) {
 
   const scrollHandler = EditorView.domEventHandlers({
     scroll(e, view) { if (onScroll) onScroll(view.scrollDOM); }
+  });
+
+  const imagesHandler = EditorView.domEventHandlers({
+    paste(e) {
+      const cd = e.clipboardData;
+      if (!onImages || !cd) return false;
+      // Une copie de cellules (tableur) ou de page web porte aussi du texte : on le laisse coller.
+      if (cd.getData('text/plain')) return false;
+      const fichiers = imagesDe(cd.files);
+      if (!fichiers.length) return false;
+      e.preventDefault();
+      onImages(fichiers, { source: 'paste', pos: null });
+      return true;
+    },
+    drop(e, view) {
+      const dt = e.dataTransfer;
+      if (!onImages || !dt) return false;
+      const fichiers = imagesDe(dt.files);
+      if (!fichiers.length) return false;
+      e.preventDefault();
+      const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+      onImages(fichiers, { source: 'drop', pos: pos === null ? view.state.selection.main.head : pos });
+      return true;
+    },
   });
 
   const state = EditorState.create({
@@ -79,6 +107,7 @@ export function createEditor(parent, opts = {}) {
       ]),
       listener,
       scrollHandler,
+      imagesHandler,
       themeComp.of(dark ? oneDark : lightTheme),
     ],
   });

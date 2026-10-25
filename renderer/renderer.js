@@ -77,6 +77,8 @@ function initEditor() {
     onCursor: ({ line, col }) => { cursorEl.textContent = `Ln ${line} · Col ${col}`; },
     // Touches de mise en forme (features/format.js), prioritaires sur celles de CodeMirror.
     raccourcis: window.mdr && window.mdr.format ? window.mdr.format.raccourcisEditeur : [],
+    // Images collées ou glissées (features/images.js).
+    onImages: (fichiers, o) => window.mdr.images.inserer(fichiers, o),
   });
 }
 
@@ -1237,6 +1239,7 @@ Object.assign(window.mdr = window.mdr || {}, {
     ouvrir: openInTab,
     nouveau: newTab,
     activer: setActiveTab,
+    enregistrer: saveFile,
   },
 });
 

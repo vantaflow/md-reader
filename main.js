@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const chokidar = require('chokidar');
 const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
+const { enregistrerImage } = require('./images.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
 const URL_DEPOT = 'https://github.com/vantaflow/md-to-pdf-app';
@@ -560,6 +561,18 @@ async function inlineLocalImages(html) {
   for (const [url, dataUri] of seen) html = html.split(`src="${url}"`).join(`src="${dataUri}"`);
   return html;
 }
+
+// Image collée ou glissée dans l'éditeur : copiée dans `images/` à côté du
+// document (voir images.js : nom nettoyé ou horodaté, sans collision, chemin
+// borné au dossier du document). Renvoie { relatif } ou { erreur }.
+ipcMain.handle('image:save', async (_e, { cheminDocument, nom, octets, mime } = {}) => {
+  try {
+    const r = await enregistrerImage({ cheminDocument, nom, octets, mime });
+    return { relatif: r.relatif, nom: r.nom };
+  } catch (e) {
+    return { erreur: e.message };
+  }
+});
 
 // Plein écran natif demandé par « Aperçu seul plein écran » : on ne quitte
 // le plein écran à la sortie du mode que s'il n'y était pas déjà avant.

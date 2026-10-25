@@ -145,6 +145,8 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         { label: 'Afficher/masquer le volet code', accelerator: acc('vue:code'), click: canal('menu:toggle-editor') },
         { label: 'Barre d’outils de mise en forme', click: commande('vue:barre-outils') },
         { label: 'Mode focus', click: commande('vue:focus') },
+        depuisTable('vue:focus-apercu'),
+        depuisTable('vue:focus-editeur'),
         { type: 'separator' },
         { label: 'Plein écran', accelerator: acc('vue:plein-ecran'), role: 'togglefullscreen' },
         { label: 'Recharger', accelerator: acc('vue:recharger'), role: 'reload' },

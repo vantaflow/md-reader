@@ -437,6 +437,27 @@ body.focus #preview {
   padding: 3rem 1.5rem;
 }
 
+/* ---------- Aperçu seul plein écran / éditeur seul sans distraction ---------- */
+body.focus-apercu header,
+body.focus-apercu #tabs,
+body.focus-apercu #sidebar,
+body.focus-apercu #editor,
+body.focus-apercu #statusbar,
+body.focus-editeur header,
+body.focus-editeur #tabs,
+body.focus-editeur #sidebar,
+body.focus-editeur #preview,
+body.focus-editeur #statusbar,
+body.focus-editeur #barre-format { display: none !important; }
+body.focus-apercu main,
+body.focus-editeur main { grid-template-columns: 1fr !important; }
+/* L'aperçu et l'éditeur s'affichent même si la disposition courante les masquait. */
+body.focus-apercu main #preview { display: block !important; width: 100%; max-width: none; margin: 0; padding: 3rem 2rem; }
+body.focus-editeur main { background: var(--bg-alt); }
+body.focus-editeur main #editor {
+  display: flex !important; width: 100%; max-width: 52rem; margin: 0 auto; border: none;
+}
+
 /* ---------- Notification du lot ---------- */
 /* Volontairement en dehors de tout ce que body.focus masque : un export par
    lot lancé en mode focus doit rester visible (refus, progression, résumé). */

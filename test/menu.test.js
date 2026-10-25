@@ -130,3 +130,17 @@ test('Fichier : « Exporter en Word… » envoie la commande export:docx', () =>
   entree.click();
   assert.deepStrictEqual(envoyes[0], ['menu:commande', 'export:docx']);
 });
+
+test('Affichage : « Aperçu seul en plein écran » et « Éditeur seul sans distraction » avec raccourcis, sans doublon', () => {
+  envoyes.length = 0;
+  const affichage = menu(base('win32'), 'Affichage').submenu;
+  const apercu = affichage.find((i) => i.label === 'Aperçu seul en plein écran');
+  const editeur = affichage.find((i) => i.label === 'Éditeur seul sans distraction');
+  assert.ok(apercu && editeur, 'entrées absentes');
+  assert.strictEqual(apercu.accelerator, 'CmdOrCtrl+Shift+F');
+  assert.strictEqual(editeur.accelerator, 'CmdOrCtrl+Shift+D');
+  apercu.click();
+  editeur.click();
+  assert.deepStrictEqual(envoyes, [['menu:commande', 'vue:focus-apercu'], ['menu:commande', 'vue:focus-editeur']]);
+  assert.ok(affichage.some((i) => i.label === 'Mode focus'), 'le mode focus existant reste dans le menu');
+});

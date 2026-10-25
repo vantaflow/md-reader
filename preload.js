@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   exportHtml: (payload) => ipcRenderer.invoke('file:export-html', payload),
   exportDocx: (payload) => ipcRenderer.invoke('file:export-docx', payload),
   lireImage: (url) => ipcRenderer.invoke('image:lire', url),
+  pleinEcran: (actif) => ipcRenderer.invoke('fenetre:plein-ecran', !!actif),
   print: (payload) => ipcRenderer.invoke('file:print', payload),
   setDefaultMarkdown: () => ipcRenderer.invoke('app:set-default-md'),
   version: () => ipcRenderer.invoke('app:version'),

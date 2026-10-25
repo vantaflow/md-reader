@@ -1332,8 +1332,10 @@ document.addEventListener('keydown', (e) => {
   }
   // Ici on ne fait rien de plus pour éviter qu'un seul Échap ferme deux
   // couches à la fois.
-  if (document.body.classList.contains('focus') && paletteEl.classList.contains('hidden')) {
-    basculerFocus(false);
+  // Le mode focus et les deux modes de présentation (aperçu plein écran,
+  // éditeur sans distraction) se quittent de la même façon.
+  if (paletteEl.classList.contains('hidden') && window.mdr.modes.actif()) {
+    window.mdr.modes.sortir();
   }
 });
 

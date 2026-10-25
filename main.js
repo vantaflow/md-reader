@@ -561,6 +561,20 @@ async function inlineLocalImages(html) {
   return html;
 }
 
+// Plein écran natif demandé par « Aperçu seul plein écran » : on ne quitte
+// le plein écran à la sortie du mode que s'il n'y était pas déjà avant.
+let pleinEcranAvantMode = false;
+ipcMain.handle('fenetre:plein-ecran', (_e, actif) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (actif) {
+    pleinEcranAvantMode = mainWindow.isFullScreen();
+    mainWindow.setFullScreen(true);
+  } else if (!pleinEcranAvantMode) {
+    mainWindow.setFullScreen(false);
+  }
+  return true;
+});
+
 // Export Word : le renderer fournit les octets du .docx, le chemin est choisi
 // par l'utilisateur dans la boîte d'enregistrement.
 ipcMain.handle('file:export-docx', async (_e, { octets, defaultName }) => {

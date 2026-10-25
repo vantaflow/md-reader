@@ -78,6 +78,8 @@ function contenuCorrespond(octets, ext) {
 // à insérer dans le Markdown (`images/nom.png`, séparateurs `/`).
 async function enregistrerImage({ cheminDocument, nom, octets, mime, maintenant = new Date() }) {
   if (typeof cheminDocument !== 'string' || !path.isAbsolute(cheminDocument)) throw new Error('Document non enregistré');
+  // Seul un document Markdown peut servir d'ancre : jamais un chemin quelconque.
+  if (!/\.(md|markdown|mdown|mkd|txt)$/i.test(cheminDocument)) throw new Error('Le document n’est pas un fichier Markdown');
   const tampon = Buffer.from(octets || []);
   if (!tampon.length) throw new Error('Image vide');
   if (tampon.length > MAX_OCTETS) throw new Error('Image trop volumineuse (25 Mo maximum)');

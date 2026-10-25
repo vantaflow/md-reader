@@ -129,3 +129,9 @@ test('enregistrerImage : un dossier images qui est un lien vers l’extérieur e
   assert.deepStrictEqual(fs.readdirSync(dehors), []);
   fs.rmSync(d, { recursive: true }); fs.rmSync(dehors, { recursive: true });
 });
+
+test('enregistrerImage : refuse un document qui n’est pas un fichier Markdown', async () => {
+  const d = dossierTemp();
+  await assert.rejects(() => img.enregistrerImage({ cheminDocument: path.join(d, 'cible.exe'), nom: 'a.png', octets: PNG }), /Markdown/);
+  assert.ok(!fs.existsSync(path.join(d, 'images')));
+});

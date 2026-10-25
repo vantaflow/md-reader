@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('api', {
   print: (payload) => ipcRenderer.invoke('file:print', payload),
   setDefaultMarkdown: () => ipcRenderer.invoke('app:set-default-md'),
   onMenu: (channel, handler) => ipcRenderer.on(channel, handler),
+  // Menu « Réglages… » (Cmd/Ctrl+,) : ouvre la modale de réglages.
+  onSettings: (handler) => ipcRenderer.on('menu:settings', handler),
   onFileChanged: (handler) => ipcRenderer.on('file:changed', (_e, data) => handler(data)),
   onOpenExternal: (handler) => ipcRenderer.on('file:open-external', (_e, data) => handler(data)),
 });

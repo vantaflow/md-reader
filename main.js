@@ -83,6 +83,8 @@ function createWindow() {
       submenu: [
         { label: `À propos de ${app.name}`, role: 'about' },
         { type: 'separator' },
+        { label: 'Réglages…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('menu:settings') },
+        { type: 'separator' },
         { label: 'Services', role: 'services' },
         { type: 'separator' },
         { label: `Masquer ${app.name}`, role: 'hide' },
@@ -110,6 +112,8 @@ function createWindow() {
         { type: 'separator' },
         { label: 'Définir comme lecteur Markdown par défaut', click: () => mainWindow.webContents.send('menu:set-default') },
         { type: 'separator' },
+        // Sous macOS le raccourci Cmd+, vit dans le menu de l'application.
+        ...(isMac ? [] : [{ label: 'Réglages…', accelerator: 'CmdOrCtrl+,', click: () => mainWindow.webContents.send('menu:settings') }, { type: 'separator' }]),
         isMac ? { label: 'Fermer la fenêtre', role: 'close' } : { label: 'Quitter', role: 'quit' },
       ],
     },

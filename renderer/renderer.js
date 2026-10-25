@@ -1,3 +1,8 @@
+// ---------- Réglages ----------
+// Magasin unique (renderer/lib/settings.js, clé localStorage `reglages`). Les
+// changements sont appliqués à chaud par `appliquerReglage()` plus bas.
+const reglages = window.mdrSettings;
+
 // ---------- Mermaid ----------
 if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' });
 
@@ -51,6 +56,10 @@ let activeTab = null;
 let folderRoot = null;
 let editor = null;
 let suppressChange = false;
+// Les onglets ouverts sont mémorisés pour « rouvrir au démarrage ». Tant que
+// la restauration du démarrage n'est pas finie, on ne mémorise rien : on
+// écraserait la liste qu'on s'apprête à relire.
+var restaurationOnglets = false;
 
 // ---------- Editor (CodeMirror 6) ----------
 function initEditor() {
@@ -73,6 +82,33 @@ let renderTimer;
 function scheduleRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 120); }
 
 // ---------- Tabs ----------
+// Chemins des onglets ouverts (les onglets sans fichier ne se rouvrent pas).
+function memoriserOnglets() {
+  if (!restaurationOnglets) return;
+  reglages.set('ongletsOuverts', tabs.filter(t => t.path).map(t => t.path));
+  reglages.set('ongletActif', activeTab && activeTab.path ? activeTab.path : null);
+}
+
+// Au démarrage : rouvre les fichiers mémorisés si le réglage est activé. Un
+// fichier disparu ou illisible est ignoré sans bruit.
+async function restaurerOnglets() {
+  if (reglages.get('rouvrirOnglets')) {
+    const actif = reglages.get('ongletActif');
+    let aActiver = null;
+    for (const chemin of reglages.get('ongletsOuverts')) {
+      try {
+        const data = await window.api.readFile(chemin);
+        if (!data || typeof data.content !== 'string') continue;
+        const t = openInTab({ path: data.path || chemin, content: data.content });
+        if (chemin === actif) aActiver = t;
+      } catch { /* fichier disparu : ignoré */ }
+    }
+    if (aActiver && tabs.includes(aActiver)) setActiveTab(aActiver);
+  }
+  restaurationOnglets = true;
+  memoriserOnglets();
+}
+
 function newTab({ path = null, content = '' } = {}) {
   const t = { id: Date.now() + Math.random(), path, content, dirty: false };
   tabs.push(t);
@@ -107,6 +143,7 @@ function setActiveTab(t) {
   renderTabs();
   window.api.watchFile(t.path || null);
   highlightTreeActive();
+  memoriserOnglets();
 }
 
 function closeTab(t) {
@@ -117,6 +154,7 @@ function closeTab(t) {
   if (t.dirty && !confirm('Fermer l\'onglet sans enregistrer ?')) return;
   const i = tabs.indexOf(t);
   tabs.splice(i, 1);
+  memoriserOnglets();
   if (activeTab === t) {
     if (tabs.length) setActiveTab(tabs[Math.max(0, i - 1)]);
     else { activeTab = null; suppressChange = true; editor.setValue(''); suppressChange = false; preview.innerHTML = ''; fileNameEl.textContent = 'Sans titre'; renderTabs(); }
@@ -252,6 +290,7 @@ async function saveFile() {
   if (saved) {
     activeTab.path = saved;
     activeTab.content = editor.getValue();
+    memoriserOnglets();
     markClean();
     fileNameEl.textContent = saved.split(/[\\/]/).pop();
     window.api.watchFile(saved);
@@ -260,6 +299,8 @@ async function saveFile() {
 }
 
 let autosaveTimer;
+// Délai réglable (en secondes dans les réglages) avant l'enregistrement auto.
+function delaiAutosaveMs() { return Math.round(reglages.get('delaiAutosave') * 1000); }
 function scheduleAutosave() {
   if (!document.getElementById('toggle-autosave').checked) return;
   // Suspendu pendant un lot : l'onglet actif est alors l'onglet de travail,
@@ -267,7 +308,7 @@ function scheduleAutosave() {
   // lot ne doit jamais programmer une écriture dessus.
   if (lotEnCours) return;
   clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(() => { if (!lotEnCours && activeTab?.path && activeTab.dirty) saveFile(); }, 2000);
+  autosaveTimer = setTimeout(() => { if (!lotEnCours && activeTab?.path && activeTab.dirty) saveFile(); }, delaiAutosaveMs());
 }
 
 // ---------- Folder tree ----------
@@ -362,20 +403,30 @@ document.querySelectorAll('.sidebar-tabs button').forEach(b => {
 });
 
 // ---------- Theme ----------
-const savedTheme = localStorage.getItem('theme') || 'light';
-setTheme(savedTheme);
-function setTheme(t) {
+// Le réglage vaut `clair`, `sombre` ou `systeme` (suit prefers-color-scheme) ;
+// l'attribut data-theme du document reste `light` ou `dark`.
+const mediaSombre = window.matchMedia('(prefers-color-scheme: dark)');
+function themeEffectif() {
+  const t = reglages.get('theme');
+  if (t === 'systeme') return mediaSombre.matches ? 'dark' : 'light';
+  return t === 'sombre' ? 'dark' : 'light';
+}
+function appliquerTheme() {
+  const t = themeEffectif();
   document.documentElement.setAttribute('data-theme', t);
   document.getElementById('hljs-theme').href = t === 'dark'
     ? '../node_modules/highlight.js/styles/github-dark.min.css'
     : '../node_modules/highlight.js/styles/github.min.css';
   if (window.mermaid) mermaid.initialize({ startOnLoad: false, theme: t === 'dark' ? 'dark' : 'default', securityLevel: 'strict' });
   if (editor) editor.setDark(t === 'dark');
-  localStorage.setItem('theme', t);
   render();
 }
+appliquerTheme();
+mediaSombre.addEventListener('change', () => { if (reglages.get('theme') === 'systeme') appliquerTheme(); });
+// Le bouton de l'en-tête bascule entre clair et sombre : il remplace le choix
+// courant (y compris « système ») par l'opposé de ce qui est affiché.
 document.getElementById('btn-theme').addEventListener('click', () => {
-  setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  reglages.set('theme', themeEffectif() === 'dark' ? 'clair' : 'sombre');
 });
 
 // ---------- View toggles & scroll sync ----------
@@ -383,29 +434,40 @@ const mainEl = document.querySelector('main');
 const toggleEditor = document.getElementById('toggle-editor');
 const toggleSync = document.getElementById('toggle-sync');
 // Volet Code : décoché par défaut au démarrage, état mémorisé entre les sessions
-toggleEditor.checked = localStorage.getItem('codePaneVisible') === 'true';
+toggleEditor.checked = reglages.get('voletCode');
 mainEl.classList.toggle('no-editor', !toggleEditor.checked);
 toggleEditor.addEventListener('change', () => {
   mainEl.classList.toggle('no-editor', !toggleEditor.checked);
-  localStorage.setItem('codePaneVisible', toggleEditor.checked);
+  reglages.set('voletCode', toggleEditor.checked);
 });
+// Les cases Sync et Autosave de l'en-tête et les réglages restent synchronisés.
+toggleSync.checked = reglages.get('synchroDefilement');
+toggleSync.addEventListener('change', () => reglages.set('synchroDefilement', toggleSync.checked));
+const toggleAutosave = document.getElementById('toggle-autosave');
+toggleAutosave.checked = reglages.get('autosave');
+toggleAutosave.addEventListener('change', () => reglages.set('autosave', toggleAutosave.checked));
 
 // Panneau latéral : réductible via le bouton ☰, état mémorisé entre les sessions
-mainEl.classList.toggle('no-sidebar', localStorage.getItem('sidebarVisible') === 'false');
+mainEl.classList.toggle('no-sidebar', !reglages.get('panneauLateral'));
 document.getElementById('btn-sidebar').addEventListener('click', () => {
-  const hidden = mainEl.classList.toggle('no-sidebar');
-  localStorage.setItem('sidebarVisible', !hidden);
+  reglages.set('panneauLateral', mainEl.classList.contains('no-sidebar'));
 });
 
 // Panneau latéral : largeur réglable à la souris, mémorisée entre les sessions.
 // Double-clic sur la poignée : retour à la largeur par défaut.
 const LARGEUR_PANNEAU_DEFAUT = 240;
 const LARGEUR_PANNEAU_MIN = 140;
+// L'ancienne clé `largeurPanneau` reste écrite en plus du réglage : elle est
+// relue telle quelle par les contrôles de test existants.
+function memoriserLargeurPanneau(px) {
+  localStorage.setItem('largeurPanneau', px);
+  reglages.set('largeurPanneau', px);
+}
 function appliquerLargeurPanneau(px) {
   mainEl.style.setProperty('--largeur-panneau', px + 'px');
 }
 {
-  const memorisee = parseInt(localStorage.getItem('largeurPanneau'), 10);
+  const memorisee = reglages.get('largeurPanneau');
   if (memorisee >= LARGEUR_PANNEAU_MIN) appliquerLargeurPanneau(memorisee);
   const poignee = document.getElementById('sidebar-resizer');
   const panneau = document.getElementById('sidebar');
@@ -423,7 +485,7 @@ function appliquerLargeurPanneau(px) {
       poignee.removeEventListener('pointerup', relacher);
       poignee.removeEventListener('pointercancel', relacher);
       document.body.classList.remove('redimensionnement');
-      localStorage.setItem('largeurPanneau', Math.round(panneau.getBoundingClientRect().width));
+      memoriserLargeurPanneau(Math.round(panneau.getBoundingClientRect().width));
     };
     poignee.addEventListener('pointermove', deplacer);
     poignee.addEventListener('pointerup', relacher);
@@ -431,7 +493,7 @@ function appliquerLargeurPanneau(px) {
   });
   poignee.addEventListener('dblclick', () => {
     appliquerLargeurPanneau(LARGEUR_PANNEAU_DEFAUT);
-    localStorage.setItem('largeurPanneau', LARGEUR_PANNEAU_DEFAUT);
+    memoriserLargeurPanneau(LARGEUR_PANNEAU_DEFAUT);
   });
 }
 
@@ -638,14 +700,13 @@ function planifierPagination() {
 function choisirModeAffichage(mode) {
   const s = document.getElementById('mode-affichage');
   s.value = MODES_AFFICHAGE.includes(mode) ? mode : 'continu';
-  localStorage.setItem('modeAffichage', s.value);
+  reglages.set('modeDefaut', s.value);
   paginer();
 }
 
 {
   const s = document.getElementById('mode-affichage');
-  const memorise = localStorage.getItem('modeAffichage');
-  s.value = MODES_AFFICHAGE.includes(memorise) ? memorise : 'a4';
+  s.value = reglages.get('modeDefaut');
   s.addEventListener('change', () => choisirModeAffichage(s.value));
   new ResizeObserver(() => ajusterZoomA4()).observe(preview);
   planifierPagination();
@@ -771,7 +832,18 @@ function readPdfOptions() {
   };
 }
 
-function showPdfModal() { pdfModal.classList.remove('hidden'); }
+// La modale s'ouvre pré-remplie avec les défauts des réglages (format,
+// orientation, marges, numéros de page, page de garde, filigrane). Les autres
+// champs gardent leur dernière valeur utilisée.
+function appliquerDefautsPdf() {
+  document.getElementById('pdf-page-size').value = reglages.get('pdfFormat');
+  document.getElementById('pdf-landscape').value = String(reglages.get('pdfPaysage'));
+  document.getElementById('pdf-margin').value = reglages.get('pdfMarge');
+  document.getElementById('pdf-header-footer').checked = reglages.get('pdfNumerosPage');
+  document.getElementById('pdf-cover').checked = reglages.get('pdfPageGarde');
+  document.getElementById('pdf-watermark').value = reglages.get('pdfFiligrane');
+}
+function showPdfModal() { appliquerDefautsPdf(); pdfModal.classList.remove('hidden'); }
 function hidePdfModal() { pdfModal.classList.add('hidden'); }
 document.getElementById('pdf-cancel').addEventListener('click', hidePdfModal);
 document.getElementById('pdf-confirm').addEventListener('click', async () => {
@@ -950,8 +1022,62 @@ window.api.onMenu('menu:toggle-editor', () => { toggleEditor.checked = !toggleEd
 window.api.onMenu('menu:toggle-theme', () => document.getElementById('btn-theme').click());
 window.api.onMenu('menu:set-default', setDefaultReader);
 
+// ---------- Application des réglages à chaud ----------
+function appliquerEditeur() {
+  if (!editor) return;
+  editor.setOptions({
+    police: reglages.get('policeEditeur'),
+    taille: reglages.get('tailleEditeur'),
+    retourLigne: reglages.get('retourLigne'),
+    numeros: reglages.get('numerosLigne'),
+    tabulation: reglages.get('tabulation'),
+  });
+}
+
+// Police, taille et marges des feuilles A4 passent par des variables CSS ;
+// tout changement de mesure oblige à recouper les feuilles.
+function appliquerApercu() {
+  const police = reglages.get('policeApercu');
+  if (police) preview.style.setProperty('--apercu-police', police);
+  else preview.style.removeProperty('--apercu-police');
+  preview.style.setProperty('--apercu-taille', reglages.get('tailleApercu') + 'px');
+  preview.style.setProperty('--a4-marge-haut', reglages.get('margeA4Haut') + 'mm');
+  preview.style.setProperty('--a4-marge-cotes', reglages.get('margeA4Cotes') + 'mm');
+  preview.style.setProperty('--a4-marge-bas', reglages.get('margeA4Bas') + 'mm');
+  planifierPagination();
+}
+
+function appliquerReglage(cle, valeur) {
+  switch (cle) {
+    case 'theme': appliquerTheme(); break;
+    case 'policeEditeur': case 'tailleEditeur': case 'retourLigne': case 'numerosLigne': case 'tabulation':
+      appliquerEditeur(); break;
+    case 'barreOutils': document.body.classList.toggle('sans-barre-outils', !valeur); break;
+    case 'modeDefaut': {
+      const s = document.getElementById('mode-affichage');
+      if (s.value !== valeur) { s.value = valeur; paginer(); }
+      break;
+    }
+    case 'policeApercu': case 'tailleApercu': case 'margeA4Haut': case 'margeA4Cotes': case 'margeA4Bas':
+      appliquerApercu(); break;
+    case 'autosave': if (toggleAutosave.checked !== valeur) toggleAutosave.checked = valeur; break;
+    case 'synchroDefilement': if (toggleSync.checked !== valeur) toggleSync.checked = valeur; break;
+    case 'voletCode':
+      if (toggleEditor.checked !== valeur) toggleEditor.checked = valeur;
+      mainEl.classList.toggle('no-editor', !valeur);
+      break;
+    case 'panneauLateral': mainEl.classList.toggle('no-sidebar', !valeur); break;
+    case 'largeurPanneau': if (valeur >= LARGEUR_PANNEAU_MIN) appliquerLargeurPanneau(valeur); break;
+    default: break;
+  }
+}
+reglages.onChange(appliquerReglage);
+
 // ---------- Init ----------
 initEditor();
+appliquerEditeur();
+appliquerApercu();
+document.body.classList.toggle('sans-barre-outils', !reglages.get('barreOutils'));
 newTab({ content: `---
 title: Bienvenue
 ---
@@ -1004,6 +1130,7 @@ sequenceDiagram
 \`\`\`
 ` });
 markClean();
+restaurerOnglets();
 
 // ---------- Palette de commandes ----------
 // `Cmd/Ctrl+K` est déjà pris par l'insertion de lien : la palette prend
@@ -1087,6 +1214,24 @@ paletteEl.addEventListener('click', (e) => { if (e.target === paletteEl) fermerP
 
 window.palette = { ouvrir: ouvrirPalette, fermer: fermerPalette };
 
+// Point d'accès unique pour les fonctions à venir (renderer/features/*.js) :
+// éditeur, réglages, palette, onglets. Les accès sont tardifs (fonctions) car
+// l'éditeur et les onglets changent au fil de la session.
+Object.assign(window.mdr = window.mdr || {}, {
+  editeur: () => editor,
+  reglages,
+  palette: window.palette,
+  commandes: window.commands,
+  apercu: () => preview,
+  onglets: {
+    liste: () => tabs.slice(),
+    actif: () => activeTab,
+    ouvrir: openInTab,
+    nouveau: newTab,
+    activer: setActiveTab,
+  },
+});
+
 document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
     e.preventDefault();
@@ -1137,6 +1282,11 @@ document.addEventListener('keydown', (e) => {
   // jusqu'ici, c'est qu'elle n'avait pas le focus. La modale PDF est la
   // couche suivante — sans ce cas, Échap en mode focus quittait le mode focus
   // et faisait réapparaître l'habillage derrière une modale restée ouverte.
+  if (window.mdr.reglagesUI.estOuvert()) {
+    e.stopPropagation();
+    window.mdr.reglagesUI.fermer();
+    return;
+  }
   if (!pdfModal.classList.contains('hidden')) {
     e.stopPropagation();
     hidePdfModal();

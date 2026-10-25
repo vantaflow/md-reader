@@ -102,7 +102,8 @@ body.redimensionnement { cursor: col-resize; user-select: none; }
 #editor .cm-editor { flex: 1; height: 100%; outline: none; }
 #editor .cm-editor.cm-focused { outline: none; }
 
-#preview { padding: 24px 32px; overflow: auto; background: var(--bg); color: var(--fg); line-height: 1.7; }
+/* Police, taille et marges A4 viennent des réglages (variables posées par renderer.js). */
+#preview { padding: 24px 32px; overflow: auto; background: var(--bg); color: var(--fg); line-height: 1.7; font-family: var(--apercu-police, inherit); font-size: var(--apercu-taille, 16px); }
 .markdown-body h1, .markdown-body h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; }
 .markdown-body h1 { font-size: 2em; } .markdown-body h2 { font-size: 1.5em; }
 .markdown-body code {
@@ -151,7 +152,7 @@ body.redimensionnement { cursor: col-resize; user-select: none; }
 #preview.pagine .a4-feuilles { display: grid; grid-template-columns: 210mm; gap: 20px; justify-content: center; }
 #preview.pagine .a4-feuilles.double { grid-template-columns: repeat(2, 210mm); }
 #preview.pagine .a4-page {
-  position: relative; box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm 20mm 20mm;
+  position: relative; box-sizing: border-box; width: 210mm; height: 297mm; padding: var(--a4-marge-haut, 18mm) var(--a4-marge-cotes, 20mm) var(--a4-marge-bas, 20mm);
   background: var(--bg); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); overflow: hidden;
 }
 #preview.pagine .a4-page.longue { height: auto; min-height: 297mm; }
@@ -453,3 +454,13 @@ body.focus #preview {
   z-index: 2000;
 }
 #lot-notification.hidden { display: none; }
+
+/* Fenêtre Réglages */
+.modal-content.reglages { width: min(560px, 92vw); max-height: 86vh; overflow: auto; }
+.reglages-onglets { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.reglages-onglets button { background: none; border: none; border-bottom: 2px solid transparent; padding: 6px 12px; color: var(--fg-muted); cursor: pointer; font-size: 13px; }
+.reglages-onglets button.actif { color: var(--fg); border-bottom-color: var(--accent); }
+.reglages-panneau { display: none; }
+.reglages-panneau.actif { display: block; }
+/* Barre d'outils de mise en forme masquée par le réglage (tâche 3). */
+body.sans-barre-outils #barre-format { display: none; }

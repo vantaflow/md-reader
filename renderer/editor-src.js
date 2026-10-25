@@ -1,14 +1,28 @@
-import { EditorState, Compartment, EditorSelection } from '@codemirror/state';
+import { EditorState, Compartment, EditorSelection, Prec } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search';
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-import { syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap, indentOnInput } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap, indentOnInput, indentUnit } from '@codemirror/language';
 import { oneDark } from '@codemirror/theme-one-dark';
 
 const themeComp = new Compartment();
+// Compartiments reconfigurables à chaud par setOptions() (réglages Éditeur).
+const apparenceComp = new Compartment();
+const wrapComp = new Compartment();
+const numerosComp = new Compartment();
+const tabComp = new Compartment();
+
+// Police et taille : priorité haute pour l'emporter sur le thème de base.
+function apparence(police, taille) {
+  const regles = { '&': { fontSize: `${taille}px` } };
+  if (police) regles['.cm-scroller'] = { fontFamily: police };
+  return Prec.high(EditorView.theme(regles));
+}
+const numeros = (actif) => (actif ? [lineNumbers(), highlightActiveLineGutter()] : []);
+const tabulation = (n) => [EditorState.tabSize.of(n), indentUnit.of(' '.repeat(n))];
 
 const lightTheme = EditorView.theme({
   '&': { fontSize: '14px', height: '100%', backgroundColor: 'var(--bg-alt)' },
@@ -38,8 +52,7 @@ export function createEditor(parent, opts = {}) {
   const state = EditorState.create({
     doc: initial,
     extensions: [
-      lineNumbers(),
-      highlightActiveLineGutter(),
+      numerosComp.of(numeros(true)),
       foldGutter(),
       history(),
       drawSelection(),
@@ -54,7 +67,9 @@ export function createEditor(parent, opts = {}) {
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       search({ top: true }),
       markdown({ base: markdownLanguage, codeLanguages: languages }),
-      EditorView.lineWrapping,
+      wrapComp.of(EditorView.lineWrapping),
+      tabComp.of(tabulation(2)),
+      apparenceComp.of(apparence(null, 14)),
       keymap.of([
         ...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
         ...historyKeymap, ...foldKeymap, ...completionKeymap,
@@ -67,12 +82,24 @@ export function createEditor(parent, opts = {}) {
   });
 
   const view = new EditorView({ state, parent });
+  const optionsCourantes = { police: null, taille: 14 };
 
   return {
     view,
     getValue: () => view.state.doc.toString(),
     setValue: (s) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: s } }),
     setDark: (d) => view.dispatch({ effects: themeComp.reconfigure(d ? oneDark : lightTheme) }),
+    // Réglages de l'éditeur, appliqués à chaud : { police, taille, retourLigne,
+    // numeros, tabulation }. Les clés absentes ne changent rien.
+    setOptions: (o = {}) => {
+      Object.assign(optionsCourantes, Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)));
+      const effets = [];
+      if ('police' in o || 'taille' in o) effets.push(apparenceComp.reconfigure(apparence(optionsCourantes.police, optionsCourantes.taille)));
+      if ('retourLigne' in o) effets.push(wrapComp.reconfigure(o.retourLigne ? EditorView.lineWrapping : []));
+      if ('numeros' in o) effets.push(numerosComp.reconfigure(numeros(!!o.numeros)));
+      if ('tabulation' in o) effets.push(tabComp.reconfigure(tabulation(o.tabulation)));
+      if (effets.length) view.dispatch({ effects: effets });
+    },
     focus: () => view.focus(),
     getScrollDOM: () => view.scrollDOM,
     insertText: (text) => {

@@ -1442,6 +1442,54 @@ app.whenReady().then(async () => {
   check('A4 — le retour en continu retire les feuilles sans perdre de contenu',
     a4r.continuPropre && a4r.paragraphesApres === a4r.paragraphesAvant, a4);
 
+  // Une liste ou un tableau plus haut qu'une page se coupe sur plusieurs
+  // feuilles A4 au lieu d'occuper une feuille allongée.
+  const LISTE_SAMPLE = [
+    '# Liste longue', '',
+    ...Array.from({ length: 150 }, (_, i) => `${i + 1}. Élément ${i + 1} ` + 'texte '.repeat(10)), '',
+    '| Col A | Col B |', '|---|---|',
+    ...Array.from({ length: 120 }, (_, i) => `| ligne ${i + 1} | valeur ${i + 1} |`), '',
+    'Fin.', '',
+  ].join('\n');
+  const coupe = await win.webContents.executeJavaScript(`(async () => {
+    window.newTab({ content: ${JSON.stringify(LISTE_SAMPLE)} });
+    await new Promise(r => setTimeout(r, 400));
+    const preview = document.getElementById('preview');
+    window.choisirModeAffichage('continu');
+    const avant = { li: preview.querySelectorAll('li').length, tr: preview.querySelectorAll('tbody tr').length };
+    window.choisirModeAffichage('a4');
+    const pages = Array.from(preview.querySelectorAll('.a4-page'));
+    const resultat = {
+      pages: pages.length,
+      longues: pages.filter(p => p.classList.contains('longue')).length,
+      debordements: pages.filter(p => !p.classList.contains('longue')
+        && p.querySelector('.a4-contenu').scrollHeight > p.querySelector('.a4-contenu').clientHeight + 1).length,
+      li: preview.querySelectorAll('.a4-contenu li').length,
+      tr: preview.querySelectorAll('.a4-contenu tbody tr').length,
+      enTetesRepris: preview.querySelectorAll('.a4-contenu thead').length,
+      numerotationSuivie: Array.from(preview.querySelectorAll('.a4-contenu ol[data-a4-suite]'))
+        .every(ol => Number(ol.getAttribute('start')) > 1),
+      avant,
+    };
+    const exportCorps = (h => h.slice(h.indexOf('<body>')))(await window.buildExportHtml({}));
+    resultat.exportRecolle = !exportCorps.includes('data-a4-suite')
+      && (exportCorps.match(/<thead/g) || []).length === 1 && (exportCorps.match(/<ol/g) || []).length === 1;
+    window.choisirModeAffichage('continu');
+    resultat.apres = { ol: preview.querySelectorAll('ol').length, li: preview.querySelectorAll('li').length,
+      tables: preview.querySelectorAll('table').length, tr: preview.querySelectorAll('tbody tr').length,
+      suites: preview.querySelectorAll('[data-a4-suite]').length };
+    localStorage.removeItem('modeAffichage');
+    return JSON.stringify(resultat);
+  })()`);
+  const cr = JSON.parse(coupe);
+  check('A4 — une liste et un tableau trop longs se coupent sans feuille allongée', cr.pages > 3 && cr.longues === 0, coupe);
+  check('A4 — les feuilles coupées ne débordent pas', cr.debordements === 0, coupe);
+  check('A4 — aucun élément de liste ni ligne de tableau perdu', cr.li === cr.avant.li && cr.tr === cr.avant.tr, coupe);
+  check('A4 — l’en-tête du tableau est repris et la numérotation continue', cr.enTetesRepris > 1 && cr.numerotationSuivie, coupe);
+  check('A4 — l’export reçoit la liste et le tableau d’un seul tenant', cr.exportRecolle, coupe);
+  check('A4 — le retour en continu recolle la liste et le tableau',
+    cr.apres.ol === 1 && cr.apres.tables === 1 && cr.apres.li === cr.avant.li && cr.apres.tr === cr.avant.tr && cr.apres.suites === 0, coupe);
+
   const panneau = await win.webContents.executeJavaScript(`(() => {
     const sidebar = document.getElementById('sidebar');
     window.appliquerLargeurPanneau(320);

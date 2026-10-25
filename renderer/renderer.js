@@ -454,18 +454,80 @@ function modeAffichage() {
 // Le contenu tel que le Markdown l'a produit, sans les feuilles d'affichage :
 // c'est ce que les exports doivent recevoir, quel que soit le mode.
 function contenuApercuHtml() {
-  if (!preview.querySelector(':scope > .a4-feuilles')) return preview.innerHTML;
-  return Array.from(preview.querySelectorAll('.a4-contenu')).map(c => c.innerHTML).join('');
+  const feuilles = preview.querySelector(':scope > .a4-feuilles');
+  if (!feuilles) return preview.innerHTML;
+  // Sur une copie : les listes et tableaux coupés sortent d'un seul tenant.
+  const copie = document.createElement('div');
+  copie.append(...noeudsRecolles(feuilles.cloneNode(true)));
+  return copie.innerHTML;
+}
+
+// Les nœuds des feuilles, dans l'ordre, la suite d'une liste ou d'un tableau
+// coupé rejoignant son début.
+function noeudsRecolles(feuilles) {
+  const noeuds = [];
+  feuilles.querySelectorAll('.a4-contenu').forEach(c => {
+    for (const n of Array.from(c.childNodes)) {
+      const debut = noeuds[noeuds.length - 1];
+      if (n.nodeType === Node.ELEMENT_NODE && n.hasAttribute('data-a4-suite') && debut) {
+        const dest = elementsDecoupables(debut).parent;
+        elementsDecoupables(n).items.forEach(item => dest.appendChild(item));
+      } else noeuds.push(n);
+    }
+  });
+  return noeuds;
 }
 
 function depaginer() {
   const feuilles = preview.querySelector(':scope > .a4-feuilles');
-  if (feuilles) {
-    const noeuds = [];
-    feuilles.querySelectorAll('.a4-contenu').forEach(c => noeuds.push(...c.childNodes));
-    preview.replaceChildren(...noeuds);
-  }
+  if (feuilles) preview.replaceChildren(...noeudsRecolles(feuilles));
   preview.classList.remove('pagine');
+}
+
+// Les blocs qu'on peut couper entre deux feuilles : une liste (par élément)
+// et un tableau (par ligne, l'en-tête étant repris sur la feuille suivante).
+function elementsDecoupables(noeud) {
+  if (noeud.nodeType !== Node.ELEMENT_NODE) return { parent: null, items: [] };
+  if (noeud.nodeName === 'UL' || noeud.nodeName === 'OL') {
+    return { parent: noeud, items: Array.from(noeud.children).filter(e => e.nodeName === 'LI') };
+  }
+  if (noeud.nodeName === 'TABLE' && noeud.tBodies.length === 1) {
+    return { parent: noeud.tBodies[0], items: Array.from(noeud.tBodies[0].rows) };
+  }
+  return { parent: null, items: [] };
+}
+
+// Une coquille vide du bloc, prête à recevoir la suite de ses éléments.
+function suiteDe(noeud) {
+  const suite = noeud.cloneNode(false);
+  suite.setAttribute('data-a4-suite', '');
+  if (noeud.nodeName === 'TABLE') {
+    if (noeud.tHead) suite.appendChild(noeud.tHead.cloneNode(true));
+    suite.appendChild(noeud.tBodies[0].cloneNode(false));
+  }
+  return suite;
+}
+
+// Le bloc déborde de la feuille : on renvoie ses derniers éléments dans une
+// suite, jusqu'à ce qu'il tienne. Renvoie la suite, ou null si rien n'a pu
+// être coupé (un seul élément, déjà trop haut à lui seul).
+function couper(noeud, contenu) {
+  const { parent, items } = elementsDecoupables(noeud);
+  if (items.length < 2) return null;
+  const suite = suiteDe(noeud);
+  const destSuite = elementsDecoupables(suite).parent || suite;
+  let restants = items.length;
+  while (deborde(contenu) && restants > 1) {
+    destSuite.insertBefore(items[restants - 1], destSuite.firstChild);
+    restants--;
+  }
+  if (deborde(contenu)) {
+    // Même un seul élément ne tient pas avec ce qui précède : on recolle.
+    Array.from(destSuite.children).forEach(item => parent.appendChild(item));
+    return null;
+  }
+  if (noeud.nodeName === 'OL') suite.setAttribute('start', String((noeud.start || 1) + restants));
+  return suite;
 }
 
 function nouvelleFeuille(conteneur) {
@@ -497,12 +559,22 @@ function paginer() {
 
   let contenu = nouvelleFeuille(feuilles);
   let feuillePleine = false;
-  for (const noeud of noeuds) {
+  const file = noeuds.slice();
+  while (file.length) {
+    const noeud = file.shift();
     const saut = noeud.nodeType === Node.ELEMENT_NODE && noeud.classList.contains('page-break');
     if ((feuillePleine || saut) && contenu.childNodes.length) contenu = nouvelleFeuille(feuilles);
     feuillePleine = false;
     contenu.appendChild(noeud);
     if (!deborde(contenu)) continue;
+    // Une liste ou un tableau trop long se coupe : ce qui tient reste sur la
+    // feuille, la suite part sur la suivante (et peut se couper à nouveau).
+    const suite = couper(noeud, contenu);
+    if (suite) {
+      file.unshift(suite);
+      feuillePleine = true;
+      continue;
+    }
     // Le bloc ne tient plus : il part sur une nouvelle feuille, sauf s'il est
     // seul (plus haut qu'une page). Il occupe alors une feuille allongée,
     // fermée aussitôt pour que la suite reprenne sur une page normale.
@@ -515,6 +587,13 @@ function paginer() {
       contenu.appendChild(noeud);
     }
     if (deborde(contenu)) {
+      // Seul sur sa feuille et encore trop haut : une liste ou un tableau se coupe.
+      const reste = couper(noeud, contenu);
+      if (reste) {
+        file.unshift(reste);
+        feuillePleine = true;
+        continue;
+      }
       contenu.parentElement.classList.add('longue');
       feuillePleine = true;
     }
@@ -566,7 +645,7 @@ function choisirModeAffichage(mode) {
 {
   const s = document.getElementById('mode-affichage');
   const memorise = localStorage.getItem('modeAffichage');
-  s.value = MODES_AFFICHAGE.includes(memorise) ? memorise : 'continu';
+  s.value = MODES_AFFICHAGE.includes(memorise) ? memorise : 'a4';
   s.addEventListener('change', () => choisirModeAffichage(s.value));
   new ResizeObserver(() => ajusterZoomA4()).observe(preview);
   planifierPagination();

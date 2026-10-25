@@ -53,7 +53,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Thème clair / sombre** (`Cmd/Ctrl+T`), appliqué à l'éditeur, l'aperçu et les diagrammes
 - **Images locales** : les chemins relatifs sont résolus par rapport au fichier `.md`, pas à l'application
 - **Saut de page manuel** : insérez `<!-- pagebreak -->` — affiché comme un repère dans l'aperçu, appliqué à l'impression
-- **Affichage en pages A4** : l'aperçu se lit en continu, en feuilles A4 une par une, ou deux feuilles côte à côte. Les feuilles sont numérotées, respectent les sauts de page, gardent un titre avec le bloc qui le suit, et se mettent à l'échelle de la fenêtre. L'export n'en est pas affecté
+- **Affichage en pages A4** : l'aperçu s'affiche par défaut en feuilles A4 une par une ; il se lit aussi en continu ou deux feuilles côte à côte. Une liste ou un tableau plus long qu'une page se coupe d'une feuille à l'autre (en-tête du tableau repris, numérotation suivie). Les feuilles sont numérotées, respectent les sauts de page, gardent un titre avec le bloc qui le suit, et se mettent à l'échelle de la fenêtre. L'export n'en est pas affecté
 
 ### Gestion des fichiers
 - **Onglets multiples** — plusieurs documents ouverts en parallèle, avec déduplication (un fichier déjà ouvert n'est pas rouvert en double, et un onglet vierge est réutilisé)

@@ -34,7 +34,8 @@ const lightTheme = EditorView.theme({
 }, { dark: false });
 
 export function createEditor(parent, opts = {}) {
-  const { initial = '', onChange, onScroll, onCursor, dark = false } = opts;
+  // `raccourcis` : [{ cle: 'Mod-b', executer }] — touches de mise en forme, priorité haute.
+  const { initial = '', onChange, onScroll, onCursor, dark = false, raccourcis = [] } = opts;
 
   const listener = EditorView.updateListener.of(u => {
     if (u.docChanged && onChange) onChange(u.state.doc.toString());
@@ -70,6 +71,7 @@ export function createEditor(parent, opts = {}) {
       wrapComp.of(EditorView.lineWrapping),
       tabComp.of(tabulation(2)),
       apparenceComp.of(apparence(null, 14)),
+      Prec.highest(keymap.of(raccourcis.map((r) => ({ key: r.cle, preventDefault: true, run: () => { r.executer(); return true; } })))),
       keymap.of([
         ...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
         ...historyKeymap, ...foldKeymap, ...completionKeymap,

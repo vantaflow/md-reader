@@ -9,6 +9,7 @@ const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
 const presse = require('./presse-papiers.js');
+const { lireFichierImport } = require('./importation.js');
 const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
@@ -703,4 +704,17 @@ ipcMain.handle('file:export-epub', async (_e, { octets, defaultName } = {}) => {
   if (canceled || !filePath) return null;
   await fs.writeFile(filePath, donnees);
   return filePath;
+});
+
+// Import .docx / .html / .htm : la boîte de dialogue choisit le fichier, la
+// lecture est bornée à 50 Mo (importation.js). Le renderer convertit en Markdown.
+// Renvoie { nom, type, octets }, { erreur } ou null si annulé.
+ipcMain.handle('file:import', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Importer un document',
+    filters: [{ name: 'Documents Word et HTML', extensions: ['docx', 'html', 'htm'] }],
+    properties: ['openFile'],
+  });
+  if (canceled || !filePaths.length) return null;
+  return lireFichierImport(filePaths[0]);
 });

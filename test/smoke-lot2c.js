@@ -15,6 +15,7 @@ const JSZip = require('jszip');
 const { pdfOptions } = require('../pdf.js');
 const { creerHarnais } = require('./helpers.js');
 const presse = require('../presse-papiers.js');
+const { lireFichierImport } = require('../importation.js');
 
 const h = creerHarnais();
 const { check } = h;
@@ -29,11 +30,14 @@ const poserDoc = (texte, debut, fin) => h.js(`(() => {
 const commande = (id) => h.js(`window.commands.run(${JSON.stringify(id)})`);
 
 (async () => {
+  let prochainImport = null;
   const sortie = { html: [], presse: [], epub: [], pdf: [], plein: [] };
   const dossierTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdr-lot2c-'));
   await h.demarrer({
     stubs: {
       'file:export-html': (_e, { html }) => { sortie.html.push(html); return '/tmp/faux.html'; },
+      // Import : le dialogue est remplacé par `prochainImport` (chemin ou résultat) ; la lecture est la VRAIE.
+      'file:import': async () => (typeof prochainImport === 'string' ? lireFichierImport(prochainImport) : prochainImport),
       'fenetre:plein-ecran': (_e, actif) => { sortie.plein.push(!!actif); return true; },
       // Export EPUB : même écriture que main.js (sans dialogue).
       'file:export-epub': (_e, { octets, defaultName }) => {
@@ -248,7 +252,73 @@ const commande = (id) => h.js(`window.commands.run(${JSON.stringify(id)})`);
   check('Slides PDF — la page est en paysage 16:9 (960 × 540 pt)', mb && Math.abs(Number(mb[1]) - 960) < 1.5 && Math.abs(Number(mb[2]) - 540) < 1.5, mb ? mb[1] + 'x' + mb[2] : 'MediaBox absente');
   check('Slides PDF — aucune page blanche en fin de document', (await h.js(`1`)) === 1 && nbPages === 4);
 
+
+  // ─── Tâche 16 : import .docx et HTML vers Markdown ─────────────────────────
+  const nbOnglets = () => h.js('window.mdr.onglets.liste().length');
+  const contenuActif = () => h.js('window.mdr.editeur().getValue()');
+  const docRound = `# Titre principal\n\n## Sous-titre\n\nUn paragraphe avec du **gras** et de l'*italique*.\n\n- pomme\n- poire\n\n1. premier\n2. second\n\n| Nom | Valeur |\n|-----|--------|\n| alpha | 1 |\n| beta | 2 |\n\n![logo](${img})\n`;
+  await poserDoc(docRound);
+  await pause(600);
+  const roundTrip = await h.js(`(async () => {
+    const octets = await window.mdr.exportDocx.construire();
+    return { taille: octets.length, md: await window.mdr.importer.versMarkdown('docx', octets) };
+  })()`);
+  const md = roundTrip.md;
+  check('Import Word — round-trip : le .docx exporté par l’application est relu', roundTrip.taille > 1000 && md.length > 50, md.slice(0, 200));
+  check('Import Word — round-trip : titres 1 et 2 conservés', /^# Titre principal$/m.test(md) && /^## Sous-titre$/m.test(md), md.slice(0, 300));
+  check('Import Word — round-trip : gras et italique conservés', /\*\*gras\*\*/.test(md) && /\*italique\*/.test(md));
+  check('Import Word — round-trip : liste à puces et liste numérotée', /^- pomme$/m.test(md) && /^- poire$/m.test(md) && /^1\. premier$/m.test(md) && /^2\. second$/m.test(md), md);
+  check('Import Word — round-trip : tableau avec en-têtes et lignes', /^\| Nom \| Valeur \|$/m.test(md) && /^\| ?-+ ?\| ?-+ ?\|$/m.test(md) && /^\| alpha \| 1 \|$/m.test(md) && /^\| beta \| 2 \|$/m.test(md), md);
+  check('Import Word — round-trip : image en data URI', /!\[[^\]]*\]\(data:image\/png;base64,/.test(md));
+
+  // Commande complète : dialogue stubé, onglet non enregistré.
+  const avantOnglets = await nbOnglets();
+  const octetsDocx = await h.js(`window.mdr.exportDocx.construire().then((o) => Array.from(o))`);
+  prochainImport = { nom: 'Rapport.docx', type: 'docx', octets: Uint8Array.from(octetsDocx) };
+  await commande('fichier:importer');
+  await pause(1500);
+  const apres = await h.jsonJs(`({ n: window.mdr.onglets.liste().length, actif: { path: window.mdr.onglets.actif().path, dirty: window.mdr.onglets.actif().dirty, titre: window.mdr.onglets.actif().titre } })`);
+  check('Import — le résultat s’ouvre dans un nouvel onglet non enregistré, marqué modifié, nommé d’après le fichier', apres.n === avantOnglets + 1 && apres.actif.path === null && apres.actif.dirty === true && apres.actif.titre === 'Rapport', JSON.stringify(apres));
+  check('Import — le nouvel onglet contient le Markdown converti', /^# Titre principal$/m.test(await contenuActif()));
+
+  // HTML aux balises hostiles, par la vraie lecture du fichier.
+  const fichierHtml = path.join(dossierTmp, 'hostile.html');
+  fs.writeFileSync(fichierHtml, '<html><head><title>T</title><script>window.__pwned = 1</script><style>h1{}</style></head><body onload="window.__pwned = 2"><h1 onclick="x()">Page importée</h1><p>Lien <a href="javascript:window.__pwned=3">piégé</a> et <a href="https://ok.fr">sûr</a>.</p><img src="x" onerror="window.__pwned=4"><iframe src="https://evil.example"></iframe><table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table></body></html>');
+  prochainImport = fichierHtml;
+  const avantHtml = await nbOnglets();
+  await commande('fichier:importer');
+  await pause(800);
+  const mdHtml = await contenuActif();
+  check('Import HTML — nouvel onglet avec titre, lien sûr et tableau convertis', (await nbOnglets()) === avantHtml + 1 && /^# Page importée$/m.test(mdHtml) && /\[sûr\]\(https:\/\/ok\.fr\)/.test(mdHtml) && /^\| A \| B \|$/m.test(mdHtml), mdHtml);
+  check('Import HTML — aucune balise hostile ni lien javascript dans le Markdown', !/script|onerror|onclick|onload|javascript|iframe|evil\.example|<style/i.test(mdHtml), mdHtml);
+  check('Import HTML — aucun script de la page importée ne s’est exécuté', (await h.js('window.__pwned === undefined')) === true);
+
+  // Cas invalides : jamais d'exception non gérée, aucun onglet ajouté.
+  const avantErr = await nbOnglets();
+  const cas = [
+    ['annulation du dialogue', null],
+    ['erreur renvoyée par le processus principal', { erreur: 'Fichier trop volumineux.' }],
+    ['.docx qui n’est pas une archive', { nom: 'faux.docx', type: 'docx', octets: new TextEncoder().encode('ceci n’est pas un docx') }],
+    ['.docx vide', { nom: 'vide.docx', type: 'docx', octets: new Uint8Array(0) }],
+    ['type inconnu', { nom: 'a.xyz', type: 'xyz', octets: new Uint8Array([1]) }],
+    ['HTML vide', { nom: 'vide.html', type: 'html', octets: new Uint8Array(0) }],
+    ['HTML sans texte', { nom: 'rien.html', type: 'html', octets: new TextEncoder().encode('<script>1</script><style>a{}</style>') }],
+  ];
+  const erreursPage = [];
+  await h.js(`window.addEventListener('error', (e) => { (window.__erreurs = window.__erreurs || []).push(e.message); }); window.addEventListener('unhandledrejection', (e) => { (window.__erreurs = window.__erreurs || []).push(String(e.reason)); }); true`);
+  for (const [nom, valeur] of cas) {
+    prochainImport = valeur;
+    await commande('fichier:importer');
+    await pause(500);
+    erreursPage.push(...(await h.jsonJs('window.__erreurs || []')));
+    check(`Import — ${nom} : aucun onglet ajouté`, (await nbOnglets()) === avantErr);
+  }
+  check('Import — aucune exception non gérée dans la page sur les cas invalides', erreursPage.length === 0, JSON.stringify(erreursPage));
+  const msg = await h.js(`document.getElementById('lot-notification').textContent`);
+  check('Import — un message d’erreur lisible est affiché pour un fichier invalide', /Import/.test(msg), msg);
+  const txt = path.join(dossierTmp, 'notes.txt');
+  fs.writeFileSync(txt, 'x');
+  check('Import — IPC : une extension non prise en charge est refusée avant lecture', /non pris en charge/.test((await lireFichierImport(txt)).erreur));
   fs.rmSync(dossierTmp, { recursive: true, force: true });
-  // @@TACHE16@@
   h.terminer();
 })().catch(h.erreurFatale);

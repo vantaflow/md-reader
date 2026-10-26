@@ -72,6 +72,7 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Export EPUB 3** (menu Fichier → « Exporter en EPUB… », palette) : une archive conforme à la norme (fichier `mimetype` en premier et non compressé, `META-INF/container.xml`, `content.opf` avec titre, auteur et langue lus du front-matter — `title`, `author`, `lang` —, `nav.xhtml` pour la table des matières, **un chapitre par titre 1**, feuille de style, images rangées dans `OEBPS/images`). Le HTML rendu est converti en XHTML valide (balises vides auto-fermées, entités, scripts et gestionnaires retirés) ; un lien interne vers un autre chapitre est réécrit vers son fichier. Les images locales et intégrées sont incluses ; une image distante (http) est remplacée par son texte alternatif ; les diagrammes Mermaid sont inclus en SVG (certaines liseuses n'affichent pas le texte des diagrammes). Les tests vérifient l'archive et la validité XML (DOMParser) ; l'ouverture dans une liseuse réelle n'a pas été testée
 - **Diaporama** (menu Affichage → « Diaporama », palette, `F5`) : une ligne qui ne contient que `---` sépare deux slides (sauf dans le front-matter, dans un bloc de code, et sous une ligne de texte où elle reste un titre de niveau 2 — laissez une ligne vide avant `---` pour séparer). Vue plein écran avec le rendu Markdown de la slide ; `→` `↓` `Espace` `PageDown` `Entrée` : suivante ; `←` `↑` `PageUp` : précédente ; `Début` / `Fin` ; `G` : aperçu en vignettes (un clic saute à la slide) ; `Échap` : sortir ; le numéro `3 / 12` s'affiche en bas à droite
 - **Export PDF des slides** (menu Fichier → « Exporter les slides en PDF… », palette) : une slide par page, en paysage 16:9 (13,333 × 7,5 pouces, sans marge ni numéro de page système), par le chemin d'export PDF existant avec une taille de page sur mesure ; une slide plus haute que la page est coupée (jamais de page supplémentaire)
+- **Import Word (.docx) et HTML vers Markdown** (menu Fichier → « Importer… », palette « Importer un document Word ou HTML… ») : mammoth convertit le .docx en HTML, turndown (avec le plugin GFM) le convertit en Markdown — titres, listes (à puces, numérotées, imbriquées), tableaux (la première ligne devient l'en-tête), gras, italique, barré, listes de tâches, liens, images, blocs de code (styles Word « Code », « Source Code »…). Un HTML importé est d'abord nettoyé (scripts, styles, cadres, objets, commentaires, attributs `on…` et liens `javascript:` retirés). Le résultat s'ouvre dans un **nouvel onglet non enregistré**. **Images d'un .docx : elles restent intégrées au Markdown en data URI** (l'onglet n'étant pas enregistré, il n'y a pas encore de dossier `images/` où les écrire) ; le fichier source est lu par le processus principal, limité à 50 Mo, et un fichier invalide affiche un message sans exception. Un test relit un .docx exporté par l'application (titres, listes, tableau, gras, image conservés)
 
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
@@ -324,6 +325,7 @@ md-to-pdf-app/
 ├── images.js                   # Enregistrement borné des images collées dans images/ (sans Electron)
 ├── contexte.js                 # Menu contextuel et langues du correcteur orthographique (sans Electron)
 ├── remplacement.js             # Rechercher/remplacer : expressions, occurrences avant/après, bornes (sans Electron)
+├── importation.js              # Lecture bornée (50 Mo) d'un fichier à importer (sans Electron, 1.9.0)
 ├── presse-papiers.js           # Validation et écriture du presse-papiers HTML riche (sans Electron, 1.9.0)
 ├── donnees.js                  # Snippets (snippets.json), liste bornée des .md d'un dossier, tags et rétroliens (sans Electron)
 ├── preload.js                  # Bridge contextIsolation entre main et renderer
@@ -365,11 +367,14 @@ md-to-pdf-app/
 │   │   ├── copier-html.js      #   Copier en HTML riche (1.9.0)
 │   │   ├── export-epub.js      #   Export EPUB (1.9.0)
 │   │   ├── diaporama.js        #   Diaporama plein écran et export PDF des slides (1.9.0)
+│   │   ├── import.js           #   Importer un .docx ou un .html en Markdown (1.9.0)
 │   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
 │   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
 │   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
 │   │   └── correcteur.js       #   réglage du correcteur orthographique (1.9.0)
 │   ├── docx-src.js             # Conversion HTML vers .docx (bibliothèque docx, bundlée par esbuild)
+│   ├── jszip-src.js            # Entrée navigateur de JSZip pour l'export EPUB (bundlée par esbuild, 1.9.0)
+│   ├── import-src.js           # Entrée navigateur de mammoth et turndown pour l'import (bundlée par esbuild, 1.9.0)
 │   ├── docx-bundle.js          # Bundle généré (ignoré par git)
 │   ├── editor-src.js           # Source CodeMirror 6 (bundlée par esbuild)
 │   ├── editor-bundle.js        # Bundle généré (ignoré par git)
@@ -391,6 +396,7 @@ md-to-pdf-app/
 ├── test/images.test.js         # Images collées : noms, collisions, écriture bornée
 ├── test/tableau.test.js        # Tableaux GFM (1.9.0)
 ├── test/export-partage.test.js # Thèmes d'export, CSS personnalisé, HTML riche, presse-papiers (1.9.0)
+├── test/import.test.js         # Import : nettoyage du HTML hostile, conversion, lecture bornée (1.9.0)
 ├── test/epub-diaporama.test.js # EPUB (archive, XHTML), diaporama (découpage, HTML et options PDF) (1.9.0)
 ├── test/reformat.test.js       # Reformatage Markdown (1.9.0)
 ├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs (1.9.0)

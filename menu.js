@@ -82,6 +82,7 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         depuisTable('fichier:ouvrir', canal('menu:open')),
         { label: 'Ouvrir récent', submenu: sousMenuRecents },
         depuisTable('fichier:dossier', canal('menu:open-folder')),
+        { label: 'Importer…', click: commande('fichier:importer') },
         { type: 'separator' },
         depuisTable('fichier:enregistrer', canal('menu:save')),
         depuisTable('fichier:enregistrer-sous'),

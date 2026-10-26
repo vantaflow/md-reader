@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   listMarkdown: () => ipcRenderer.invoke('folder:list-markdown'),
   exportHtml: (payload) => ipcRenderer.invoke('file:export-html', payload),
   exportDocx: (payload) => ipcRenderer.invoke('file:export-docx', payload),
+  ecrirePresseHtml: (payload) => ipcRenderer.invoke('presse-papiers:ecrire-html', payload),
   lireImage: (url) => ipcRenderer.invoke('image:lire', url),
   enregistrerImage: (payload) => ipcRenderer.invoke('image:save', payload),
   langueCorrecteur: (choix) => ipcRenderer.invoke('correcteur:langues', choix),

@@ -39,6 +39,8 @@
         { cle: 'pdfNumerosPage', libelle: 'Numéros de page', type: 'case' },
         { cle: 'pdfPageGarde', libelle: 'Page de garde (depuis le front-matter)', type: 'case' },
         { cle: 'pdfFiligrane', libelle: 'Filigrane', type: 'texte' },
+        { cle: 'exportTheme', libelle: 'Thème d’export PDF et HTML', type: 'liste', options: [['sobre', 'Sobre'], ['rapport', 'Rapport'], ['academique', 'Académique']] },
+        { cle: 'exportCssPerso', libelle: 'CSS personnalisé (ajouté après le thème, 20 000 caractères au plus)', type: 'zone' },
       ],
     },
     {
@@ -71,6 +73,11 @@
         o.value = v; o.textContent = l;
         el.appendChild(o);
       }
+    } else if (def.type === 'zone') {
+      el = document.createElement('textarea');
+      el.rows = 6;
+      el.spellcheck = false;
+      el.maxLength = 20000;
     } else {
       el = document.createElement('input');
       el.type = def.type === 'case' ? 'checkbox' : def.type === 'nombre' ? 'number' : 'text';

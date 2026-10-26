@@ -64,6 +64,12 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Filtre par tags** : les tags du front-matter (`tags: [a, b]`, `tags: a, b` ou liste YAML `- a`) des `.md` du dossier ouvert sont proposés dans l'onglet Fichiers ; cliquer sur un tag filtre l'arborescence (plusieurs tags se cumulent), le champ de saisie restreint la liste des tags et le filtre ; « Effacer le filtre » rétablit l'arbre. Seuls les 16 premiers Ko de chaque fichier sont lus
 - **Rechercher/remplacer dans tout le dossier** (onglet Recherche, ou palette → « Rechercher/remplacer dans le dossier… ») : le champ de recherche existant, un champ « Remplacer par » et trois options (casse, mot entier, expression régulière avec `$1`, `$&`). **Aperçu des changements** affiche, par fichier, chaque occurrence avant/après (ligne par ligne) avec une case à cocher par fichier et par occurrence ; **Appliquer** demande confirmation puis écrit. Le remplacement ne touche que les `.md` du dossier ouvert (tout chemin hors dossier est refusé), écrit de façon atomique (fichier temporaire puis renommage) et relit chaque fichier : un fichier modifié depuis l'aperçu est sauté et signalé. Un fichier dont l'onglet a des modifications non enregistrées est ignoré ; les autres onglets concernés sont rechargés. Bornes : 500 caractères de recherche, 2 000 de remplacement, 500 occurrences par fichier, 5 000 au total, 2 Mo par fichier ; une expression invalide ou qui reconnaît la chaîne vide affiche un message, sans exception
 
+### Export et partage — arrive en 1.9.0
+Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
+- **Thèmes d'export PDF et HTML** : *Sobre* (sans empattement, filets fins), *Rapport* (titres colorés, en-têtes de tableau pleins avec bandes, marges latérales de 12 mm) et *Académique* (serif, texte justifié avec césure, titres numérotés 1, 1.1, 1.1.1, retrait de première ligne, tableaux à trois filets, marges de 20 mm). Le thème se choisit dans la modale d'export PDF, dans une petite liste à l'export HTML, et son défaut se règle dans **Réglages → Export PDF**. Ces règles n'existent que dans les documents exportés : l'aperçu et l'application ne changent pas
+- **CSS personnalisé** (Réglages → Export PDF) : un texte libre, 20 000 caractères au plus, inséré dans l'export **après** le thème (il a donc le dernier mot) ; toute balise (`</style>`, `<script>`, commentaires HTML) en est retirée avant l'insertion
+- **Copier en HTML riche** (menu Édition, palette, `Cmd/Ctrl+Alt+Shift+C`) : la sélection (ou le document entier, sans son front-matter, quand rien n'est sélectionné) est rendue en HTML aux **styles en ligne** — titres, tableaux avec bordures et `border="1"`, code, citations, liens, images en data URI — et posée dans le presse-papiers avec `text/html` et `text/plain` (le Markdown source). Les clients de courrier ignorent les feuilles de style, d'où les styles en ligne. **Limite** : le collage réel dans Outlook, Teams ou Word n'a pas été testé (les tests relisent le contenu du presse-papiers système, pas le résultat dans ces applications) ; les diagrammes Mermaid et les formules KaTeX ne sont pas convertis en images pour la copie
+
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
 - **Coloration syntaxique** du code (highlight.js — ~45 langages courants)
@@ -206,6 +212,7 @@ La fenêtre s'ouvre **maximisée** au démarrage.
 | Saut de page | `Cmd/Ctrl+Enter` |
 | Éditeur de tableau (1.9.0) | `Cmd/Ctrl+Alt+Shift+T` |
 | Reformater le document / la sélection (1.9.0) | `Cmd/Ctrl+Alt+Shift+F` / `R` |
+| Copier en HTML riche (1.9.0) | `Cmd/Ctrl+Alt+Shift+C` |
 | Aperçu seul plein écran | `Cmd/Ctrl+Shift+F` |
 | Éditeur seul sans distraction | `Cmd/Ctrl+Shift+D` |
 | Zoom de l'interface | `Cmd/Ctrl+Plus` / `-` / `0` |
@@ -313,6 +320,7 @@ md-to-pdf-app/
 ├── images.js                   # Enregistrement borné des images collées dans images/ (sans Electron)
 ├── contexte.js                 # Menu contextuel et langues du correcteur orthographique (sans Electron)
 ├── remplacement.js             # Rechercher/remplacer : expressions, occurrences avant/après, bornes (sans Electron)
+├── presse-papiers.js           # Validation et écriture du presse-papiers HTML riche (sans Electron, 1.9.0)
 ├── donnees.js                  # Snippets (snippets.json), liste bornée des .md d'un dossier, tags et rétroliens (sans Electron)
 ├── preload.js                  # Bridge contextIsolation entre main et renderer
 ├── pdf.js                      # Options de rendu, lecture des destinations d'un PDF,
@@ -349,6 +357,8 @@ md-to-pdf-app/
 │   │   ├── favoris.js          #   fichiers épinglés (1.9.0)
 │   │   ├── tags.js             #   filtre par tags dans l'onglet Fichiers (1.9.0)
 │   │   ├── remplacer.js        #   rechercher/remplacer dans le dossier, aperçu et application (1.9.0)
+│   │   ├── rendu.js            #   rendu détaché partagé (copie HTML riche, EPUB, diaporama, 1.9.0)
+│   │   ├── copier-html.js      #   Copier en HTML riche (1.9.0)
 │   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
 │   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
 │   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
@@ -374,6 +384,7 @@ md-to-pdf-app/
 ├── test/menu.test.js           # Menus, raccourcis, documents récents
 ├── test/images.test.js         # Images collées : noms, collisions, écriture bornée
 ├── test/tableau.test.js        # Tableaux GFM (1.9.0)
+├── test/export-partage.test.js # Thèmes d'export, CSS personnalisé, HTML riche, presse-papiers (1.9.0)
 ├── test/reformat.test.js       # Reformatage Markdown (1.9.0)
 ├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs (1.9.0)
 ├── test/modeles-snippets.test.js # Modèles, snippets, menu contextuel, liste des .md (1.9.0)
@@ -390,6 +401,7 @@ md-to-pdf-app/
 ├── test/smoke-images.js        # Images collées et glissées
 ├── test/smoke-lot2a.js         # Écriture 1.9.0 : tableau, reformatage, emoji, liens, modèles, snippets, correcteur
 ├── test/smoke-lot2b.js         # Navigation 1.9.0 : plan, liens wiki, rétroliens, favoris, tags, rechercher/remplacer
+├── test/smoke-lot2c.js         # Export et partage 1.9.0 : thèmes, HTML riche, EPUB, diaporama, import
 ├── .github/workflows/ci.yml        # CI : test de fumée macOS / Linux / Windows
 ├── .github/workflows/release.yml   # CI : build & publication des installateurs
 ├── installer.iss               # Script Inno Setup (installateur Windows alternatif)

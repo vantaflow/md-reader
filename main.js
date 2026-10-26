@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session, clipboard } = require('electron');
 const fs = require('fs/promises');
 const { existsSync } = require('fs');
 const path = require('path');
@@ -8,6 +8,7 @@ const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
+const presse = require('./presse-papiers.js');
 const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
@@ -678,3 +679,11 @@ ipcMain.handle('folder:scan-tags', canalDossier((racine) => scannerTags(racine))
 ipcMain.handle('folder:backlinks', canalDossier((racine, c) => trouverRetroliens(racine, c.cible)));
 ipcMain.handle('folder:replace-preview', canalDossier((racine, c) => apercuRemplacement(racine, c.parametres)));
 ipcMain.handle('folder:replace-apply', canalDossier((racine, c) => appliquerRemplacement(racine, c.parametres, c.selection)));
+
+// ─── Export et partage (1.9.0) ──────────────────────────────────────────────
+// « Copier en HTML riche » : le renderer fournit le HTML aux styles en ligne et
+// le Markdown source ; seul le presse-papiers est touché, jamais le disque.
+ipcMain.handle('presse-papiers:ecrire-html', (_e, charge) => {
+  try { return presse.ecrireHtml(clipboard, charge); }
+  catch (e) { return { erreur: e.message }; }
+});

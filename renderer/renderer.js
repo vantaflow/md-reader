@@ -872,6 +872,7 @@ function readPdfOptions() {
     numberHeadings: document.getElementById('pdf-number-headings').checked,
     cover: document.getElementById('pdf-cover').checked,
     watermark: document.getElementById('pdf-watermark').value,
+    theme: window.mdrThemesExport.themeOuDefaut(document.getElementById('pdf-theme').value),
   };
 }
 
@@ -885,6 +886,16 @@ function appliquerDefautsPdf() {
   document.getElementById('pdf-header-footer').checked = reglages.get('pdfNumerosPage');
   document.getElementById('pdf-cover').checked = reglages.get('pdfPageGarde');
   document.getElementById('pdf-watermark').value = reglages.get('pdfFiligrane');
+  document.getElementById('pdf-theme').value = reglages.get('exportTheme');
+}
+// Le thème du sélecteur suit le réglage tant que la modale n'a pas été ouverte
+// (l'impression et l'export HTML lisent ce champ).
+document.getElementById('pdf-theme').value = reglages.get('exportTheme');
+
+// Feuille de style des exports : thème choisi puis CSS personnalisé du réglage.
+// Jamais ajoutée à l'aperçu ni à styles.css.
+function cssThemeExport(options = {}) {
+  return window.mdrThemesExport.cssExport({ theme: options.theme || reglages.get('exportTheme'), cssPerso: reglages.get('exportCssPerso') });
 }
 function showPdfModal() { appliquerDefautsPdf(); pdfModal.classList.remove('hidden'); }
 function hidePdfModal() { pdfModal.classList.add('hidden'); }
@@ -1007,6 +1018,7 @@ async function buildPrintableHtml(options) {
   return `<!DOCTYPE html><html data-theme="light"><head><meta charset="utf-8"><title>${escapeHtml(documentName())}</title>${baseTag()}<style>${css}${katexCss}${hljsCss}
     body { display:block; margin: 0; } header, #tabs, #sidebar, #editor, #statusbar, .modal { display:none !important; }
     main { display: block; } #preview { padding: 0; overflow: visible; }
+    ${cssThemeExport(options)}
     ${paginationCss(options)}
   </style></head><body>${watermarkHtml(options.watermark)}<div id="preview" class="markdown-body">${options.cover ? coverHtml() : ''}${contenuApercuHtml()}</div></body></html>`;
 }
@@ -1034,12 +1046,25 @@ async function buildExportHtml(options) {
   const hljsCss = await fetch(document.getElementById('hljs-theme').href).then(r => r.text()).catch(() => '');
   return `<!DOCTYPE html><html data-theme="light"><head><meta charset="utf-8"><title>${escapeHtml(activeTab?.path?.split(/[\\/]/).pop() || 'Document')}</title>${baseTag()}<style>${css}${katexCss}${hljsCss}
     body { max-width: 900px; margin: 2rem auto; padding: 0 1rem; font-family: -apple-system, Segoe UI, Roboto, sans-serif; }
+    ${cssThemeExport(options)}
     @media print { ${paginationCss(options)} }
   </style></head><body>${watermarkHtml(options.watermark)}<div class="markdown-body">${options.cover ? coverHtml() : ''}${bodyHtml}</div></body></html>`;
 }
 
+// Thème de l'export HTML : choix dans une liste (le thème par défaut des
+// réglages en tête), annulable.
+async function choisirThemeExportHtml() {
+  const defaut = window.mdrThemesExport.themeOuDefaut(reglages.get('exportTheme'));
+  const themes = window.mdrThemesExport.THEMES;
+  const items = [...themes.filter((t) => t.id === defaut), ...themes.filter((t) => t.id !== defaut)]
+    .map((t) => ({ id: t.id, libelle: t.libelle, detail: t.id === defaut ? 'par défaut' : '' }));
+  return window.mdr.modale.choisir({ titre: 'Thème de l’export HTML', items, filtre: false });
+}
+
 async function doExportHtml() {
-  const options = readPdfOptions();
+  const theme = await choisirThemeExportHtml();
+  if (!theme) return;
+  const options = { ...readPdfOptions(), theme };
   const full = await buildExportHtml(options);
   const out = await window.api.exportHtml({ html: full, defaultName: documentName() });
   if (out) fileNameEl.textContent = 'HTML : ' + out.split(/[\\/]/).pop();
@@ -1114,6 +1139,7 @@ function appliquerReglage(cle, valeur) {
       if (!valeur) mainEl.classList.remove('no-preview');
       mainEl.classList.toggle('no-editor', !valeur);
       break;
+    case 'exportTheme': document.getElementById('pdf-theme').value = valeur; break;
     case 'panneauLateral': mainEl.classList.toggle('no-sidebar', !valeur); break;
     case 'largeurPanneau': if (valeur >= LARGEUR_PANNEAU_MIN) appliquerLargeurPanneau(valeur); break;
     default: break;

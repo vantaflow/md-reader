@@ -11,6 +11,8 @@
   else racine.mdrSettings = fabrique();
 })(typeof self !== 'undefined' ? self : this, function () {
   const CLE = 'reglages';
+  // Borne du CSS personnalisé d'export (même valeur que lib/themes-export.js).
+  const MAX_CSS_PERSO = 20000;
 
   const DEFAUTS = {
     // Éditeur
@@ -35,6 +37,9 @@
     pdfNumerosPage: true,
     pdfPageGarde: false,
     pdfFiligrane: '',
+    // Thème des exports PDF / HTML (sobre, rapport, académique) et CSS personnalisé
+    exportTheme: 'sobre',
+    exportCssPerso: '',
     // Général (délai d'autosave en secondes)
     autosave: false,
     delaiAutosave: 2,
@@ -57,6 +62,7 @@
     modeDefaut: ['continu', 'a4', 'a4-double'],
     theme: ['clair', 'sombre', 'systeme'],
     pdfFormat: ['A4', 'Letter', 'Legal', 'A3', 'A5'],
+    exportTheme: ['sobre', 'rapport', 'academique'],
     correcteur: ['aucun', 'fr', 'en', 'fr-en'],
   };
 
@@ -68,6 +74,7 @@
     if (typeof valeur !== typeof defaut) return false;
     if (typeof valeur === 'number' && !Number.isFinite(valeur)) return false;
     if (CHOIX[cle] && !CHOIX[cle].includes(valeur)) return false;
+    if (cle === 'exportCssPerso' && valeur.length > MAX_CSS_PERSO) return false;
     return true;
   }
 

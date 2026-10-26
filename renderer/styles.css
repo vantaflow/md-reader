@@ -584,3 +584,6 @@ body.sans-barre-outils #barre-format { display: none; }
 #replace-preview .rp-avant { background: rgba(220, 60, 60, 0.15); }
 #replace-preview .rp-apres { background: rgba(60, 170, 90, 0.18); }
 #replace-preview .sautes { color: var(--fg-muted); font-size: 11px; margin-top: 4px; }
+
+/* Zone de texte libre des réglages (CSS personnalisé d'export) */
+.modal-content textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px; font: 12px "SF Mono", Menlo, Consolas, monospace; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; resize: vertical; }

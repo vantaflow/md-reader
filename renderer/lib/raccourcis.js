@@ -22,6 +22,7 @@
     { id: 'export:html', groupe: 'Fichier', libelle: 'Exporter en HTML…', accel: 'CmdOrCtrl+Shift+E' },
     { id: 'export:imprimer', groupe: 'Fichier', libelle: 'Imprimer…', accel: 'CmdOrCtrl+P' },
     { id: 'reglages:ouvrir', groupe: 'Fichier', libelle: 'Réglages…', accel: 'CmdOrCtrl+,' },
+    { id: 'edition:copier-html-riche', groupe: 'Fichier', libelle: 'Copier en HTML riche', accel: 'CmdOrCtrl+Alt+Shift+C' },
     // Format
     { id: 'format:gras', groupe: 'Format', libelle: 'Gras', accel: 'CmdOrCtrl+B' },
     { id: 'format:italique', groupe: 'Format', libelle: 'Italique', accel: 'CmdOrCtrl+I' },

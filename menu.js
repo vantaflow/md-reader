@@ -112,6 +112,8 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         ...(isMac ? [{ label: 'Coller et adapter le style', role: 'pasteAndMatchStyle' }] : []),
         { label: 'Supprimer', role: 'delete' },
         { label: 'Tout sélectionner', role: 'selectAll' },
+        { type: 'separator' },
+        depuisTable('edition:copier-html-riche'),
       ],
     },
     { label: 'Format', submenu: formatFinal },

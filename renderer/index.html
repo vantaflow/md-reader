@@ -115,6 +115,13 @@
       <label class="row"><input type="checkbox" id="pdf-break-h1" /> Saut de page avant chaque titre 1</label>
       <label class="row"><input type="checkbox" id="pdf-number-headings" /> Numéroter les titres</label>
       <label class="row"><input type="checkbox" id="pdf-cover" /> Page de garde (depuis le front-matter)</label>
+      <label>Thème
+        <select id="pdf-theme">
+          <option value="sobre">Sobre</option>
+          <option value="rapport">Rapport</option>
+          <option value="academique">Académique</option>
+        </select>
+      </label>
       <label>En-tête
         <input type="text" id="pdf-header-text" placeholder="(optionnel)" />
       </label>
@@ -151,6 +158,8 @@
   <script src="lib/plan.js"></script>
   <script src="lib/wiki.js"></script>
   <script src="lib/tags.js"></script>
+  <script src="lib/themes-export.js"></script>
+  <script src="lib/html-riche.js"></script>
   <script src="commands.js"></script>
   <script src="features/reglages.js"></script>
   <script src="features/format.js"></script>
@@ -170,6 +179,8 @@
   <script src="features/favoris.js"></script>
   <script src="features/tags.js"></script>
   <script src="features/remplacer.js"></script>
+  <script src="features/rendu.js"></script>
+  <script src="features/copier-html.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

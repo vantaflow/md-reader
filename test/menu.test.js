@@ -145,3 +145,12 @@ test('Affichage : « Aperçu seul en plein écran » et « Éditeur seul sans di
   assert.deepStrictEqual(envoyes, [['menu:commande', 'vue:focus-apercu'], ['menu:commande', 'vue:focus-editeur']]);
   assert.ok(affichage.some((i) => i.label === 'Mode focus'), 'le mode focus existant reste dans le menu');
 });
+
+test('Édition : « Copier en HTML riche » avec son raccourci, sans doublon, envoie la commande', () => {
+  envoyes.length = 0;
+  const entree = menu(base('win32'), 'Édition').submenu.find((i) => i.label === 'Copier en HTML riche');
+  assert.ok(entree, 'entrée absente');
+  assert.strictEqual(entree.accelerator, 'CmdOrCtrl+Alt+Shift+C');
+  entree.click();
+  assert.deepStrictEqual(envoyes[0], ['menu:commande', 'edition:copier-html-riche']);
+});

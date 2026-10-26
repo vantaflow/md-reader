@@ -16,9 +16,6 @@ build/icon.iconset/
 .autopilot/
 .worktrees/
 renderer/docx-bundle.js
-<<<<<<< HEAD
 renderer/document-bundle.js
-=======
 renderer/jszip-bundle.js
 renderer/import-bundle.js
->>>>>>> amelioration/lots-1-2

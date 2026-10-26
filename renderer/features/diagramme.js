@@ -273,8 +273,12 @@
           poignee.removeEventListener('pointerup', fin);
           poignee.removeEventListener('pointercancel', fin);
           ligne.remove();
-          const cible = document.elementFromPoint(e.clientX, e.clientY);
-          const noeudCible = cible && cible.closest ? cible.closest('.dg-noeud') : null;
+          // Le nœud sous le pointeur, par ses rectangles : elementFromPoint ne
+          // voit rien hors de la zone affichée (canevas défilé, petite fenêtre).
+          const noeudCible = Array.from(canevas.querySelectorAll('.dg-noeud')).find(d => {
+            const b = d.getBoundingClientRect();
+            return d !== poignee.parentElement && e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+          }) || null;
           if (noeudCible && canevas.contains(noeudCible)) relier(n.id, noeudCible.dataset.id);
         };
         poignee.addEventListener('pointermove', deplacer);

@@ -201,8 +201,13 @@ const pause = (ms) => h.attendre(ms);
   await pause(300);
   const sysSombre = await h.js(`document.documentElement.getAttribute('data-theme')`);
   nativeTheme.themeSource = 'light';
-  await pause(400);
-  const sysClair = await h.js(`document.documentElement.getAttribute('data-theme')`);
+  // La notification du changement de thème système peut tarder sur les
+  // machines d'intégration : on attend jusqu'à 3 s.
+  let sysClair = null;
+  for (let i = 0; i < 30 && sysClair !== 'light'; i++) {
+    await pause(100);
+    sysClair = await h.js(`document.documentElement.getAttribute('data-theme')`);
+  }
   check('Thème système — suit le système sombre', sysSombre === 'dark', sysSombre);
   check('Thème système — suit le système clair à chaud', sysClair === 'light', sysClair);
   nativeTheme.themeSource = 'dark';

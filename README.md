@@ -14,6 +14,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 
 ## 📑 Sommaire
 
+- [Nouveautés](#-nouveautés)
 - [Fonctionnalités](#-fonctionnalités)
 - [Aperçu de l'interface](#-aperçu-de-linterface)
 - [Lecteur Markdown par défaut](#-lecteur-markdown-par-défaut)
@@ -27,6 +28,30 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - [Scripts npm](#️-scripts-npm)
 - [Dépannage](#-dépannage)
 - [Licence](#-licence) · [Contribuer](#-contribuer)
+
+---
+
+## 🆕 Nouveautés
+
+**1.10.0 — édition façon Word**
+- **Mode Document** (`Cmd/Ctrl+Shift+M`) : on écrit directement dans une page A4 mise en forme, le fichier reste du Markdown
+- **Ruban** Accueil / Insertion / Mise en page : police, taille, couleur, surlignage, alignement, styles, tableau, image, diagramme, symboles, sommaire, notes, format et marges
+- **Tableaux modifiables dans la page** (lignes, colonnes, alignement, clic droit) et **éditeur de diagrammes sans code** (organigramme et séquence, double-clic pour modifier)
+- **Styles du document** (police et couleurs dans le front-matter) et mise en forme ponctuelle de la sélection, conservés dans les exports PDF, HTML et Word
+
+**1.9.0 — écriture, navigation, partage, confort**
+- Éditeur de tableau visuel, reformatage, emoji `:nom:`, modèles, snippets, correcteur FR/EN
+- Plan du document glisser-déposer, liens `[[note]]` et rétroliens, favoris et tags, rechercher/remplacer dans un dossier
+- Thèmes d'export, CSS personnalisé, EPUB, diaporama (`F5`), copie en HTML riche, import Word et HTML
+- Historique des versions, mode présentation lecture, statistiques avancées, vérification des mises à jour
+
+**1.8.0 — réglages et menus**
+- Fenêtre **Réglages** (`Cmd/Ctrl+,`), menus Affichage, Format, Aide et documents récents, barre de mise en forme
+- **Export Word (.docx)**, modes aperçu seul et éditeur seul, images collées ou glissées copiées dans `images/`
+
+**Prévu pour la prochaine version** — l'éditeur de diagrammes visuel s'étendra aux autres types Mermaid (classes, états, Gantt, entités-relations, parcours utilisateur, camembert, frise…) ; aujourd'hui il couvre l'organigramme et la séquence, les autres types restent modifiables en code
+
+**1.7.1** — aperçu en pages A4 par défaut ; une liste ou un tableau plus long qu'une page se coupe d'une feuille à l'autre
 
 ---
 
@@ -45,8 +70,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Front-matter YAML** reconnu et masqué de l'aperçu (`--- title: … ---`)
 - **Statistiques live** : nombre de mots, de caractères et temps de lecture estimé
 
-<<<<<<< HEAD
-### Mode Document et ruban Word — 1.10.0
+### Mode Document et ruban Word
 
 Un second mode d'édition, à côté du mode code : le document s'édite **directement dans une page A4 mise en forme** (façon Word / Typora), sous un ruban à trois onglets. Le fichier reste du **Markdown** : le mode code et le mode Document sont deux vues du même texte.
 
@@ -71,11 +95,7 @@ Un second mode d'édition, à côté du mode code : le document s'édite **direc
 - **Raccourcis** : `Cmd/Ctrl+B / I / U`, `Cmd/Ctrl+K` (lien), `Cmd/Ctrl+Alt+1..3` (titres), listes `Cmd/Ctrl+Maj+7/8/9`, `Cmd/Ctrl+Entrée` (saut de page), `Cmd/Ctrl+Z` et `Cmd/Ctrl+Maj+Z` ; le menu Édition > Annuler / Rétablir utilise le même historique.
 - **Limites connues** : pas de fusion de cellules ; l'alignement et le retrait ne s'appliquent pas aux éléments de liste ni aux cellules ; les pages sont indiquées par un trait tous les 297 mm (pas de pagination exacte à l'écran, l'aperçu A4 et le PDF restent la référence) ; pas de recherche dans le document en mode Document (utiliser le mode code) ; les emoji `:nom:` restent du texte dans la page ; un lien de référence `[x][ref]` est converti en lien direct, sa définition est conservée en fin de document ; les fins de ligne et le front-matter sont conservés, mais un document modifié est réécrit en forme canonique ; la largeur des tableaux de l'export Word suppose une page A4.
 
-### Écriture — arrive en 1.9.0
-Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
-=======
 ### Écriture
->>>>>>> amelioration/lots-1-2
 - **Éditeur de tableau visuel** (menu Format, barre de mise en forme, palette, `Cmd/Ctrl+Alt+Shift+T`) : une grille de cellules modifiables, ajout et suppression de lignes et de colonnes, alignement par colonne (gauche, centre, droite). Il s'ouvre sur le tableau Markdown sous le curseur (qu'il remplace, colonnes alignées, à « Appliquer ») ou en crée un nouveau
 - **Reformater le Markdown** (menu Format, palette, `Cmd/Ctrl+Alt+Shift+F` pour le document, `Cmd/Ctrl+Alt+Shift+R` pour la sélection) : listes numérotées renumérotées, puces homogènes (`-`), tableaux alignés, espaces de fin retirés, lignes vides multiples réduites. Les blocs de code et le front-matter ne sont jamais touchés ; un saut de ligne forcé (deux espaces en fin de ligne, suivis d'une ligne de texte) est conservé. L'annulation (`Cmd/Ctrl+Z`) rétablit l'état d'avant
 - **Emoji** : `:nom:` (environ 350 noms courants, à la GitHub) est proposé après `:xx` dans l'éditeur et converti dans l'aperçu et les exports, jamais dans le code ni dans un bloc de code ; le texte source reste `:nom:`
@@ -268,8 +288,10 @@ La liste complète est aussi dans **Aide → Raccourcis clavier**, générée de
 
 Les installateurs sont disponibles dans l'onglet [Releases](../../releases) du dépôt :
 
-- **macOS** : `MD-to-PDF-<version>-arm64.dmg` (Apple Silicon) ou `MD-to-PDF-<version>-x64.dmg` (Intel)
-- **Windows** : `MD-to-PDF-Setup-<version>.exe` (installateur NSIS)
+- **macOS** : `MD.Reader-<version>-arm64.dmg` (Apple Silicon) ou `MD.Reader-<version>-x64.dmg` (Intel)
+- **Windows** : `MD.Reader.Setup.<version>.exe` (installateur NSIS)
+
+Dernière version : [v1.10.0](https://github.com/vantaflow/md-reader/releases/latest). L'application n'est pas signée par Apple : au premier lancement sur macOS, faites clic droit → **Ouvrir** (ou `xattr -dr com.apple.quarantine "/Applications/MD Reader.app"`).
 
 ### Pré-requis (build depuis les sources)
 

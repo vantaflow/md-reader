@@ -154,3 +154,16 @@ test('Édition : « Copier en HTML riche » avec son raccourci, sans doublon, en
   entree.click();
   assert.deepStrictEqual(envoyes[0], ['menu:commande', 'edition:copier-html-riche']);
 });
+
+test('Fichier et Affichage : EPUB, slides en PDF, diaporama (F5) envoient leur commande', () => {
+  envoyes.length = 0;
+  const fichier = menu(base('win32'), 'Fichier').submenu;
+  const affichage = menu(base('win32'), 'Affichage').submenu;
+  const epub = fichier.find((i) => i.label === 'Exporter en EPUB…');
+  const slides = fichier.find((i) => i.label === 'Exporter les slides en PDF…');
+  const diapo = affichage.find((i) => i.label === 'Diaporama');
+  assert.ok(epub && slides && diapo, 'entrées absentes');
+  assert.strictEqual(diapo.accelerator, 'F5');
+  epub.click(); slides.click(); diapo.click();
+  assert.deepStrictEqual(envoyes, [['menu:commande', 'export:epub'], ['menu:commande', 'export:diaporama-pdf'], ['menu:commande', 'vue:diaporama']]);
+});

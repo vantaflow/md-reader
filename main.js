@@ -4,7 +4,7 @@ const { existsSync } = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const chokidar = require('chokidar');
-const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
+const { pdfOptions, pageSizePrint, tailleSurMesure, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
@@ -421,8 +421,8 @@ ipcMain.handle('file:print', async (_e, { html, options }) => {
     await new Promise((resolve) => {
       win.webContents.print({
         printBackground: true,
-        landscape: !!options?.landscape,
-        pageSize: options?.pageSize || 'A4',
+        landscape: !!options?.landscape && !tailleSurMesure(options?.pageSize),
+        pageSize: pageSizePrint(options || {}),
         margins: { marginType: 'custom', top: m, bottom: m, left: m, right: m },
       }, () => resolve());
     });
@@ -686,4 +686,21 @@ ipcMain.handle('folder:replace-apply', canalDossier((racine, c) => appliquerRemp
 ipcMain.handle('presse-papiers:ecrire-html', (_e, charge) => {
   try { return presse.ecrireHtml(clipboard, charge); }
   catch (e) { return { erreur: e.message }; }
+});
+
+// Export EPUB : le renderer construit l'archive (jszip) et fournit les octets ;
+// seul le chemin choisi dans la boîte d'enregistrement reçoit l'écriture. Octets
+// bornés (200 Mo) et signature de l'archive vérifiée.
+const MAX_EPUB = 200 * 1024 * 1024;
+ipcMain.handle('file:export-epub', async (_e, { octets, defaultName } = {}) => {
+  if (!octets || typeof octets.length !== 'number' || octets.length < 4 || octets.length > MAX_EPUB) return null;
+  const donnees = Buffer.from(octets);
+  if (donnees.readUInt32LE(0) !== 0x04034b50) return null; // pas une archive zip
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    filters: [{ name: 'EPUB', extensions: ['epub'] }],
+    defaultPath: (typeof defaultName === 'string' && defaultName ? defaultName : 'document') + '.epub',
+  });
+  if (canceled || !filePath) return null;
+  await fs.writeFile(filePath, donnees);
+  return filePath;
 });

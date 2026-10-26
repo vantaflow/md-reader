@@ -69,6 +69,9 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Thèmes d'export PDF et HTML** : *Sobre* (sans empattement, filets fins), *Rapport* (titres colorés, en-têtes de tableau pleins avec bandes, marges latérales de 12 mm) et *Académique* (serif, texte justifié avec césure, titres numérotés 1, 1.1, 1.1.1, retrait de première ligne, tableaux à trois filets, marges de 20 mm). Le thème se choisit dans la modale d'export PDF, dans une petite liste à l'export HTML, et son défaut se règle dans **Réglages → Export PDF**. Ces règles n'existent que dans les documents exportés : l'aperçu et l'application ne changent pas
 - **CSS personnalisé** (Réglages → Export PDF) : un texte libre, 20 000 caractères au plus, inséré dans l'export **après** le thème (il a donc le dernier mot) ; toute balise (`</style>`, `<script>`, commentaires HTML) en est retirée avant l'insertion
 - **Copier en HTML riche** (menu Édition, palette, `Cmd/Ctrl+Alt+Shift+C`) : la sélection (ou le document entier, sans son front-matter, quand rien n'est sélectionné) est rendue en HTML aux **styles en ligne** — titres, tableaux avec bordures et `border="1"`, code, citations, liens, images en data URI — et posée dans le presse-papiers avec `text/html` et `text/plain` (le Markdown source). Les clients de courrier ignorent les feuilles de style, d'où les styles en ligne. **Limite** : le collage réel dans Outlook, Teams ou Word n'a pas été testé (les tests relisent le contenu du presse-papiers système, pas le résultat dans ces applications) ; les diagrammes Mermaid et les formules KaTeX ne sont pas convertis en images pour la copie
+- **Export EPUB 3** (menu Fichier → « Exporter en EPUB… », palette) : une archive conforme à la norme (fichier `mimetype` en premier et non compressé, `META-INF/container.xml`, `content.opf` avec titre, auteur et langue lus du front-matter — `title`, `author`, `lang` —, `nav.xhtml` pour la table des matières, **un chapitre par titre 1**, feuille de style, images rangées dans `OEBPS/images`). Le HTML rendu est converti en XHTML valide (balises vides auto-fermées, entités, scripts et gestionnaires retirés) ; un lien interne vers un autre chapitre est réécrit vers son fichier. Les images locales et intégrées sont incluses ; une image distante (http) est remplacée par son texte alternatif ; les diagrammes Mermaid sont inclus en SVG (certaines liseuses n'affichent pas le texte des diagrammes). Les tests vérifient l'archive et la validité XML (DOMParser) ; l'ouverture dans une liseuse réelle n'a pas été testée
+- **Diaporama** (menu Affichage → « Diaporama », palette, `F5`) : une ligne qui ne contient que `---` sépare deux slides (sauf dans le front-matter, dans un bloc de code, et sous une ligne de texte où elle reste un titre de niveau 2 — laissez une ligne vide avant `---` pour séparer). Vue plein écran avec le rendu Markdown de la slide ; `→` `↓` `Espace` `PageDown` `Entrée` : suivante ; `←` `↑` `PageUp` : précédente ; `Début` / `Fin` ; `G` : aperçu en vignettes (un clic saute à la slide) ; `Échap` : sortir ; le numéro `3 / 12` s'affiche en bas à droite
+- **Export PDF des slides** (menu Fichier → « Exporter les slides en PDF… », palette) : une slide par page, en paysage 16:9 (13,333 × 7,5 pouces, sans marge ni numéro de page système), par le chemin d'export PDF existant avec une taille de page sur mesure ; une slide plus haute que la page est coupée (jamais de page supplémentaire)
 
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
@@ -213,6 +216,7 @@ La fenêtre s'ouvre **maximisée** au démarrage.
 | Éditeur de tableau (1.9.0) | `Cmd/Ctrl+Alt+Shift+T` |
 | Reformater le document / la sélection (1.9.0) | `Cmd/Ctrl+Alt+Shift+F` / `R` |
 | Copier en HTML riche (1.9.0) | `Cmd/Ctrl+Alt+Shift+C` |
+| Diaporama (1.9.0) | `F5` |
 | Aperçu seul plein écran | `Cmd/Ctrl+Shift+F` |
 | Éditeur seul sans distraction | `Cmd/Ctrl+Shift+D` |
 | Zoom de l'interface | `Cmd/Ctrl+Plus` / `-` / `0` |
@@ -359,6 +363,8 @@ md-to-pdf-app/
 │   │   ├── remplacer.js        #   rechercher/remplacer dans le dossier, aperçu et application (1.9.0)
 │   │   ├── rendu.js            #   rendu détaché partagé (copie HTML riche, EPUB, diaporama, 1.9.0)
 │   │   ├── copier-html.js      #   Copier en HTML riche (1.9.0)
+│   │   ├── export-epub.js      #   Export EPUB (1.9.0)
+│   │   ├── diaporama.js        #   Diaporama plein écran et export PDF des slides (1.9.0)
 │   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
 │   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
 │   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
@@ -385,6 +391,7 @@ md-to-pdf-app/
 ├── test/images.test.js         # Images collées : noms, collisions, écriture bornée
 ├── test/tableau.test.js        # Tableaux GFM (1.9.0)
 ├── test/export-partage.test.js # Thèmes d'export, CSS personnalisé, HTML riche, presse-papiers (1.9.0)
+├── test/epub-diaporama.test.js # EPUB (archive, XHTML), diaporama (découpage, HTML et options PDF) (1.9.0)
 ├── test/reformat.test.js       # Reformatage Markdown (1.9.0)
 ├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs (1.9.0)
 ├── test/modeles-snippets.test.js # Modèles, snippets, menu contextuel, liste des .md (1.9.0)

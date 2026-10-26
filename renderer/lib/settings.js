@@ -46,6 +46,8 @@
     synchroDefilement: true,
     rouvrirOnglets: false,
     correcteur: 'fr-en',
+    // Objectif de mots du document (0 : aucun), suivi dans la barre d'état et les statistiques
+    objectifMots: 0,
     // État d'interface mémorisé (en-tête, panneau latéral)
     voletCode: false,
     panneauLateral: true,
@@ -74,6 +76,7 @@
     if (typeof valeur !== typeof defaut) return false;
     if (typeof valeur === 'number' && !Number.isFinite(valeur)) return false;
     if (CHOIX[cle] && !CHOIX[cle].includes(valeur)) return false;
+    if (cle === 'objectifMots' && (valeur < 0 || valeur > 1000000)) return false;
     if (cle === 'exportCssPerso' && valeur.length > MAX_CSS_PERSO) return false;
     return true;
   }

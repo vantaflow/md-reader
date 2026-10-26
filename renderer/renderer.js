@@ -284,7 +284,9 @@ function updateStats() {
   const words = (text.trim().match(/\S+/g) || []).length;
   const chars = text.length;
   const minutes = Math.max(1, Math.round(words / 200));
-  statsEl.textContent = `${words} mots · ${chars} car · ~${minutes} min lecture`;
+  const objectif = reglages.get('objectifMots');
+  const suite = objectif > 0 ? ` · objectif ${Math.min(100, Math.floor((words / objectif) * 100))} %` : '';
+  statsEl.textContent = `${words} mots · ${chars} car · ~${minutes} min lecture${suite}`;
 }
 
 // ---------- TOC ----------
@@ -1140,6 +1142,7 @@ function appliquerReglage(cle, valeur) {
       if (!valeur) mainEl.classList.remove('no-preview');
       mainEl.classList.toggle('no-editor', !valeur);
       break;
+    case 'objectifMots': updateStats(); break;
     case 'exportTheme': document.getElementById('pdf-theme').value = valeur; break;
     case 'panneauLateral': mainEl.classList.toggle('no-sidebar', !valeur); break;
     case 'largeurPanneau': if (valeur >= LARGEUR_PANNEAU_MIN) appliquerLargeurPanneau(valeur); break;

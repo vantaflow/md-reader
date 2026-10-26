@@ -154,6 +154,8 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         depuisTable('vue:focus-apercu'),
         depuisTable('vue:focus-editeur'),
         depuisTable('vue:diaporama'),
+        depuisTable('vue:lecture'),
+        { label: 'Statistiques…', click: commande('stats:ouvrir') },
         { type: 'separator' },
         { label: 'Plein écran', accelerator: acc('vue:plein-ecran'), role: 'togglefullscreen' },
         { label: 'Recharger', accelerator: acc('vue:recharger'), role: 'reload' },

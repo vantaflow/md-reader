@@ -176,3 +176,14 @@ test('Fichier : « Historique des versions… » envoie la commande fichier:hist
   e.click();
   assert.deepStrictEqual(envoyes, [['menu:commande', 'fichier:historique']]);
 });
+
+test('Affichage : mode présentation lecture (raccourci, sans doublon) et Statistiques envoient leur commande', () => {
+  envoyes.length = 0;
+  const affichage = menu(base('win32'), 'Affichage').submenu;
+  const lecture = affichage.find((i) => i.label === 'Mode présentation lecture');
+  const stats = affichage.find((i) => i.label === 'Statistiques…');
+  assert.ok(lecture && stats, 'entrées absentes');
+  assert.strictEqual(lecture.accelerator, 'CmdOrCtrl+Alt+L');
+  lecture.click(); stats.click();
+  assert.deepStrictEqual(envoyes, [['menu:commande', 'vue:lecture'], ['menu:commande', 'stats:ouvrir']]);
+});

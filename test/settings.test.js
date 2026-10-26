@@ -102,3 +102,13 @@ test('reinitialiser remet les défauts', () => {
   s.reinitialiser();
   assert.equal(s.get('tailleEditeur'), 14);
 });
+
+test('objectifMots : 0 par défaut, borné entre 0 et 1 000 000, nombre uniquement', () => {
+  const s = creer(stockage());
+  assert.equal(s.get('objectifMots'), 0);
+  s.set('objectifMots', 1500);
+  assert.equal(s.get('objectifMots'), 1500);
+  assert.throws(() => s.set('objectifMots', -1), TypeError);
+  assert.throws(() => s.set('objectifMots', 1000001), TypeError);
+  assert.throws(() => s.set('objectifMots', '500'), TypeError);
+});

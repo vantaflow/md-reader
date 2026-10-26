@@ -55,6 +55,10 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Snippets** (palette → « Insérer un snippet… », « Enregistrer la sélection comme snippet… », « Supprimer un snippet… ») : textes réutilisables conservés dans un fichier `snippets.json` du dossier de données de l'application ; quelques exemples au premier lancement ; `{{date}}` est remplacé par la date du jour
 - **Correcteur orthographique français et anglais** : le correcteur natif d'Electron souligne les fautes dans l'éditeur ; clic droit sur un mot souligné : suggestions du dictionnaire, « Ajouter au dictionnaire », puis couper, copier, coller. Le choix des langues (français, anglais, les deux, désactivé) est dans **Réglages → Général**, appliqué immédiatement. Sous macOS, le correcteur du système est utilisé : ses langues se gèrent dans les Réglages Système ; sous Windows et Linux, les dictionnaires se téléchargent au premier usage
 
+### Navigation — arrive en 1.9.0
+Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
+- **Panneau Plan du document** (onglet « Plan » de la barre latérale, ancien « Menu ») : les sections du texte source, indentées par niveau (titres `#` à `######`, hors blocs de code et front-matter). Un clic place le curseur de l'éditeur sur le titre et fait défiler l'aperçu jusqu'à la section ; la section qui contient le curseur est surlignée. **Glisser une entrée sur une autre** déplace la section avec ses sous-sections, avant ou après la cible selon la moitié survolée ; le niveau de la section déplacée s'aligne sur celui de la cible (ses sous-sections suivent, entre 1 et 6) ; un seul `Cmd/Ctrl+Z` annule le déplacement. Les titres soulignés (`===`, `---`) ne forment pas de section
+
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
 - **Coloration syntaxique** du code (highlight.js — ~45 langages courants)
@@ -317,6 +321,7 @@ md-to-pdf-app/
 │   │   ├── format.js           #   mise en forme Markdown (gras, titres, listes, tableau…)
 │   │   ├── tableau.js          #   tableaux GFM : analyse, sérialisation alignée, repérage (1.9.0)
 │   │   ├── reformat.js         #   reformatage du Markdown (1.9.0)
+│   │   ├── plan.js             #   sections du texte source et déplacement d'une section (1.9.0)
 │   │   ├── emoji.js            #   table des emoji :nom:, suggestions, remplacement (1.9.0)
 │   │   ├── liens.js            #   chemins relatifs et noms de notes pour les liens (1.9.0)
 │   │   ├── modeles.js          #   modèles de documents (1.9.0)
@@ -331,6 +336,7 @@ md-to-pdf-app/
 │   │   ├── modale.js           #   modales génériques : fenêtre, saisie, choix dans une liste (1.9.0)
 │   │   ├── tableau.js          #   éditeur de tableau visuel (1.9.0)
 │   │   ├── reformat.js         #   commandes de reformatage (1.9.0)
+│   │   ├── plan.js             #   panneau Plan : clic, section courante, glisser-déposer (1.9.0)
 │   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
 │   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
 │   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
@@ -359,6 +365,7 @@ md-to-pdf-app/
 ├── test/reformat.test.js       # Reformatage Markdown (1.9.0)
 ├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs (1.9.0)
 ├── test/modeles-snippets.test.js # Modèles, snippets, menu contextuel, liste des .md (1.9.0)
+├── test/plan.test.js           # Plan du document : sections, déplacement (1.9.0)
 ├── test/helpers.js             # Aide commune aux tests Electron (fenêtre invisible, check)
 ├── test/smoke.js               # Test de fumée end-to-end, sous Electron
 ├── test/smoke-lot1.js          # Réglages, menus, barre de mise en forme, préférences
@@ -366,6 +373,7 @@ md-to-pdf-app/
 ├── test/smoke-focus.js         # Modes aperçu seul et éditeur sans distraction
 ├── test/smoke-images.js        # Images collées et glissées
 ├── test/smoke-lot2a.js         # Écriture 1.9.0 : tableau, reformatage, emoji, liens, modèles, snippets, correcteur
+├── test/smoke-lot2b.js         # Navigation 1.9.0 : plan, liens wiki, rétroliens, favoris, tags, rechercher/remplacer
 ├── .github/workflows/ci.yml        # CI : test de fumée macOS / Linux / Windows
 ├── .github/workflows/release.yml   # CI : build & publication des installateurs
 ├── installer.iss               # Script Inno Setup (installateur Windows alternatif)

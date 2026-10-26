@@ -74,7 +74,10 @@ function initEditor() {
       markDirty();
     },
     onScroll: (dom) => syncScroll(dom, preview),
-    onCursor: ({ line, col }) => { cursorEl.textContent = `Ln ${line} · Col ${col}`; },
+    onCursor: ({ line, col }) => {
+      cursorEl.textContent = `Ln ${line} · Col ${col}`;
+      if (window.mdr && window.mdr.plan) window.mdr.plan.curseur(line);
+    },
     // Touches de mise en forme (features/format.js), prioritaires sur celles de CodeMirror.
     raccourcis: window.mdr && window.mdr.format ? window.mdr.format.raccourcisEditeur : [],
     // Images collées ou glissées (features/images.js).
@@ -270,20 +273,9 @@ function updateStats() {
 // identifiants sont attribués une seule fois, sinon les deux sommaires
 // divergeraient.
 function buildToc(headings) {
-  const toc = document.getElementById('toc');
-  toc.innerHTML = '';
-  for (const h of headings) {
-    const a = document.createElement('a');
-    a.href = '#' + h.id;
-    a.textContent = h.text;
-    a.className = h.el.tagName.toLowerCase();
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      const top = h.el.getBoundingClientRect().top - preview.getBoundingClientRect().top + preview.scrollTop - 8;
-      preview.scrollTo({ top, behavior: 'smooth' });
-    });
-    toc.appendChild(a);
-  }
+  // Panneau Plan : sections du texte source, clic = saut, glisser-déposer
+  // (renderer/features/plan.js).
+  window.mdr.plan.construire(headings);
 }
 
 // ---------- File ops ----------
@@ -730,8 +722,11 @@ function choisirModeAffichage(mode) {
 }
 
 let syncing = false;
+// Suspend la synchronisation proportionnelle des défilements un instant (saut
+  // vers une section du plan : éditeur et aperçu défilent chacun à leur cible).
+let synchroSuspendueJusqua = 0;
 function syncScroll(from, to) {
-  if (!toggleSync.checked || syncing) return;
+  if (!toggleSync.checked || syncing || Date.now() < synchroSuspendueJusqua) return;
   const ratio = from.scrollTop / Math.max(1, from.scrollHeight - from.clientHeight);
   syncing = true;
   to.scrollTop = ratio * Math.max(1, to.scrollHeight - to.clientHeight);
@@ -1236,6 +1231,7 @@ Object.assign(window.mdr = window.mdr || {}, {
   palette: window.palette,
   commandes: window.commands,
   apercu: () => preview,
+  synchro: { suspendre: (ms) => { synchroSuspendueJusqua = Date.now() + ms; } },
   dossier: () => folderRoot,
   onglets: {
     liste: () => tabs.slice(),

@@ -89,6 +89,11 @@ body.redimensionnement { cursor: col-resize; user-select: none; }
 #toc .h1 { font-weight: 600; }
 #toc .h2 { padding-left: 12px; }
 #toc .h3 { padding-left: 24px; font-size: 11px; }
+#toc a.courante { background: var(--bg-alt); box-shadow: inset 2px 0 0 var(--accent); font-weight: 600; }
+#toc a.glisse { opacity: 0.45; }
+#toc a.depot-avant { box-shadow: inset 0 2px 0 var(--accent); }
+#toc a.depot-apres { box-shadow: inset 0 -2px 0 var(--accent); }
+#toc a[draggable="true"] { cursor: pointer; -webkit-user-drag: element; }
 #toc .h4, #toc .h5, #toc .h6 { padding-left: 36px; font-size: 11px; color: var(--fg-muted); }
 
 #search-input { margin: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }

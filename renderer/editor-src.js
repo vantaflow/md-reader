@@ -1,6 +1,6 @@
 import { EditorState, Compartment, EditorSelection, Prec } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, rectangularSelection, crosshairCursor } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, isolateHistory, undo, redo } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search';
@@ -190,6 +190,21 @@ export function createEditor(parent, opts = {}) {
       if ('tabulation' in o) effets.push(tabComp.reconfigure(tabulation(o.tabulation)));
       if ('correcteur' in o) effets.push(correcteurComp.reconfigure(attributsCorrecteur(o.correcteur)));
       if (effets.length) view.dispatch({ effects: effets });
+    },
+    // Remplace une plage en une seule transaction annulable d'un coup (historique
+    // isolé : elle ne se fond pas dans la frappe qui la précède ou la suit).
+    remplacerPlage: (from, to, insert) => view.dispatch({
+      changes: { from, to, insert },
+      annotations: isolateHistory.of('full'),
+      userEvent: 'input.move',
+    }),
+    annuler: () => undo(view),
+    refaire: () => redo(view),
+    // Place le curseur au début de la ligne `ligne` (1-based) et la fait défiler dans la vue.
+    aLaLigne: (ligne) => {
+      const n = Math.min(Math.max(1, ligne), view.state.doc.lines);
+      const pos = view.state.doc.line(n).from;
+      view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'start', yMargin: 8 }) });
     },
     focus: () => view.focus(),
     getScrollDOM: () => view.scrollDOM,

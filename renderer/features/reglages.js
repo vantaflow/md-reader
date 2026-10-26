@@ -47,6 +47,7 @@
         { cle: 'delaiAutosave', libelle: 'Délai avant enregistrement (secondes)', type: 'nombre', min: 1, max: 60, pas: 1 },
         { cle: 'synchroDefilement', libelle: 'Synchroniser le défilement éditeur et aperçu', type: 'case' },
         { cle: 'rouvrirOnglets', libelle: 'Rouvrir les onglets au démarrage', type: 'case' },
+        { cle: 'correcteur', libelle: 'Correcteur orthographique', type: 'liste', options: [['fr-en', 'Français et anglais'], ['fr', 'Français'], ['en', 'Anglais'], ['aucun', 'Désactivé']] },
       ],
     },
   ];

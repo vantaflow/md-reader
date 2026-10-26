@@ -504,3 +504,27 @@ body.sans-barre-outils #barre-format { display: none; }
 .modal-content.aide kbd, .modal-content.aide code { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-size: 12px; white-space: pre-wrap; }
 .modal-content.aide h4 { margin: 14px 0 4px; }
 .modal-content.aide a { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+/* Fonctions d'écriture (1.9.0) : éditeur de tableau, saisie, choix dans une liste */
+.modal-content.tableau-editeur { width: min(760px, 94vw); max-height: 88vh; display: flex; flex-direction: column; }
+.tableau-barre { display: flex; gap: 8px; margin-bottom: 8px; }
+.tableau-barre button, .tableau-col-outils button { padding: 3px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-alt); color: var(--fg); cursor: pointer; }
+.tableau-defilement { overflow: auto; border: 1px solid var(--border); border-radius: 4px; max-height: 56vh; }
+.tableau-grille { border-collapse: collapse; width: 100%; }
+.tableau-grille th, .tableau-grille td { padding: 2px; border: 1px solid var(--border); vertical-align: middle; }
+.tableau-grille input[type="text"] { width: 100%; min-width: 90px; box-sizing: border-box; padding: 4px 6px; border: none; background: var(--bg); color: var(--fg); font: inherit; font-size: 13px; }
+.tableau-grille thead tr:nth-child(2) input { font-weight: 700; background: var(--bg-alt); }
+.tableau-grille .tableau-etiquette { width: 56px; text-align: center; font-size: 11px; color: var(--fg-muted); font-weight: 400; }
+.tableau-col-outils { display: flex; gap: 2px; justify-content: center; }
+.tableau-col-outils button { padding: 1px 6px; }
+.tableau-col-outils button.actif { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.tableau-grille button.danger { padding: 1px 7px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-alt); color: #c0392b; cursor: pointer; }
+.tableau-grille button:disabled { opacity: .4; cursor: default; }
+.modal-content.choix, .modal-content.saisie { width: min(480px, 92vw); }
+.modal-content.saisie input { width: 100%; box-sizing: border-box; }
+.modal-content.choix > .modale-corps > input { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+.modale-liste { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow: auto; border: 1px solid var(--border); border-radius: 4px; }
+.modale-item { padding: 7px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.modale-item.actif, .modale-item:hover { background: var(--bg-alt); }
+.modale-item .modale-detail { font-size: 12px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modale-vide { padding: 10px; color: var(--fg-muted); font-size: 13px; }

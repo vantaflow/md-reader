@@ -14,6 +14,7 @@ const apparenceComp = new Compartment();
 const wrapComp = new Compartment();
 const numerosComp = new Compartment();
 const tabComp = new Compartment();
+const correcteurComp = new Compartment();
 
 // Police et taille : priorité haute pour l'emporter sur le thème de base.
 function apparence(police, taille) {
@@ -23,6 +24,61 @@ function apparence(police, taille) {
 }
 const numeros = (actif) => (actif ? [lineNumbers(), highlightActiveLineGutter()] : []);
 const tabulation = (n) => [EditorState.tabSize.of(n), indentUnit.of(' '.repeat(n))];
+
+// Correcteur orthographique : attributs du contenu éditable. Les suggestions et
+// le menu contextuel viennent du processus principal (événement context-menu).
+function attributsCorrecteur(choix) {
+  const actif = choix !== 'aucun';
+  return EditorView.contentAttributes.of({ spellcheck: actif ? 'true' : 'false', lang: choix === 'en' ? 'en' : 'fr', autocorrect: 'off', autocapitalize: 'off' });
+}
+
+// Sources d'autocomplétion : emoji après « :xx » et liens vers les autres .md
+// après « ]( » ou « [[ » (propositions fournies par l'application).
+function sourceEmoji(context) {
+  const m = context.matchBefore(/(?:^|[\s(])(:[a-z0-9_+\-]{2,})$/i);
+  if (!m || !window.mdrEmoji) return null;
+  const saisie = m.text.slice(m.text.indexOf(':'));
+  const from = m.to - saisie.length;
+  // Jamais dans un bloc de code clôturé : un nombre impair de ``` avant la position.
+  const avant = context.state.doc.sliceString(0, from);
+  if (((avant.match(/^\s*(```|~~~)/gm) || []).length) % 2 === 1) return null;
+  const options = window.mdrEmoji.suggerer(saisie).map((e) => ({ label: `:${e.nom}:`, detail: e.emoji, type: 'text', apply: `:${e.nom}:` }));
+  return options.length ? { from, options, filter: false } : null;
+}
+
+function creerSourceLiens(propositions) {
+  return async (context) => {
+    if (!propositions) return null;
+    const lien = context.matchBefore(/\]\(([^)\s]*)$/);
+    const note = lien ? null : context.matchBefore(/\[\[([^\]\n]*)$/);
+    const m = lien || note;
+    if (!m) return null;
+    const saisie = m.text.slice(2);
+    const from = m.from + 2;
+    const liste = await propositions(lien ? 'lien' : 'note', saisie);
+    if (context.aborted || !liste || !liste.length) return null;
+    return {
+      from,
+      filter: false,
+      options: liste.slice(0, 100).map((p) => ({
+        label: p.label,
+        detail: p.detail,
+        type: 'text',
+        apply: (view, _c, de, a) => {
+          const suite = view.state.doc.sliceString(a, Math.min(view.state.doc.length, a + 2));
+          let insere = p.apply;
+          let curseur = de + p.apply.length;
+          if (note) {
+            // `[[` : la fermeture `]]` est ajoutée si l'éditeur ne l'a pas déjà posée.
+            if (!suite.startsWith(']]')) insere += ']]';
+            curseur += 2;
+          } else if (suite.startsWith(')')) curseur += 1;
+          view.dispatch({ changes: { from: de, to: a, insert: insere }, selection: { anchor: curseur } });
+        },
+      })),
+    };
+  };
+}
 
 const lightTheme = EditorView.theme({
   '&': { fontSize: '14px', height: '100%', backgroundColor: 'var(--bg-alt)' },
@@ -38,7 +94,8 @@ export function createEditor(parent, opts = {}) {
   // `onImages(fichiers, { source: 'paste'|'drop', pos })` : fichiers image collés
   // ou déposés dans l'éditeur ; elle les prend en charge (le comportement par
   // défaut est alors supprimé). Le texte collé n'est jamais détourné.
-  const { initial = '', onChange, onScroll, onCursor, dark = false, raccourcis = [], onImages } = opts;
+  const { initial = '', onChange, onScroll, onCursor, dark = false, raccourcis = [], onImages, correcteur = 'fr-en', propositionsLiens } = opts;
+  const sourceLiens = creerSourceLiens(propositionsLiens);
   const imagesDe = (liste) => [...(liste || [])].filter((f) => /^image\/(png|jpe?g|gif|webp|svg\+xml)$/i.test(f.type) || /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name || ''));
 
   const listener = EditorView.updateListener.of(u => {
@@ -88,7 +145,8 @@ export function createEditor(parent, opts = {}) {
       indentOnInput(),
       bracketMatching(),
       closeBrackets(),
-      autocompletion(),
+      autocompletion({ override: [sourceEmoji, sourceLiens] }),
+      correcteurComp.of(attributsCorrecteur(correcteur)),
       rectangularSelection(),
       crosshairCursor(),
       highlightActiveLine(),
@@ -117,6 +175,7 @@ export function createEditor(parent, opts = {}) {
 
   return {
     view,
+    sources: { emoji: sourceEmoji, liens: sourceLiens },
     getValue: () => view.state.doc.toString(),
     setValue: (s) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: s } }),
     setDark: (d) => view.dispatch({ effects: themeComp.reconfigure(d ? oneDark : lightTheme) }),
@@ -129,6 +188,7 @@ export function createEditor(parent, opts = {}) {
       if ('retourLigne' in o) effets.push(wrapComp.reconfigure(o.retourLigne ? EditorView.lineWrapping : []));
       if ('numeros' in o) effets.push(numerosComp.reconfigure(numeros(!!o.numeros)));
       if ('tabulation' in o) effets.push(tabComp.reconfigure(tabulation(o.tabulation)));
+      if ('correcteur' in o) effets.push(correcteurComp.reconfigure(attributsCorrecteur(o.correcteur)));
       if (effets.length) view.dispatch({ effects: effets });
     },
     focus: () => view.focus(),

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require('electron');
 const fs = require('fs/promises');
 const { existsSync } = require('fs');
 const path = require('path');
@@ -7,6 +7,8 @@ const chokidar = require('chokidar');
 const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
+const contexte = require('./contexte.js');
+const { lireSnippets, ecrireSnippets, listerMdRelatifs } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
 const URL_DEPOT = 'https://github.com/vantaflow/md-to-pdf-app';
@@ -118,6 +120,7 @@ function createWindow() {
     },
   });
   mainWindow.maximize();
+  contexte.brancherMenuContextuel(mainWindow.webContents, { Menu, fenetre: () => mainWindow });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
   mainWindow.webContents.once('did-finish-load', () => {
@@ -149,7 +152,7 @@ if (!gotLock) {
     for (const f of filesFromArgv(argv)) openPathInRenderer(f);
   });
 
-  app.whenReady().then(() => { chargerRecents(); createWindow(); });
+  app.whenReady().then(() => { chargerRecents(); appliquerLanguesCorrecteur('fr-en'); createWindow(); });
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 }
@@ -622,4 +625,30 @@ ipcMain.handle('file:export-html', async (_e, { html, defaultName }) => {
   if (canceled || !filePath) return null;
   await fs.writeFile(filePath, await inlineLocalImages(html), 'utf8');
   return filePath;
+});
+
+// ─── Lot « écriture » (1.9.0) ───────────────────────────────────────────────
+
+// Correcteur orthographique : le correcteur natif de Chromium. Au démarrage
+// français et anglais ; le renderer renvoie ensuite le réglage de l'utilisateur
+// (canal `correcteur:langues`), appliqué à chaud. Sous macOS le correcteur du
+// système est utilisé et ses langues se règlent dans les Préférences Système :
+// setSpellCheckerLanguages n'y a pas d'effet.
+function appliquerLanguesCorrecteur(choix) { return contexte.appliquerLanguesCorrecteur(session.defaultSession, choix); }
+ipcMain.handle('correcteur:langues', (_e, choix) => appliquerLanguesCorrecteur(typeof choix === 'string' ? choix : 'fr-en'));
+
+// Menu contextuel : branché à la création de la fenêtre (contexte.js construit le
+// gabarit : suggestions du dictionnaire, « Ajouter au dictionnaire », couper,
+// copier, coller).
+
+// Snippets : un fichier JSON dans le dossier de données de l'application, jamais
+// ailleurs ; la liste est assainie et bornée à chaque lecture et écriture.
+ipcMain.handle('snippets:lire', () => lireSnippets(app.getPath('userData')));
+ipcMain.handle('snippets:ecrire', (_e, liste) => ecrireSnippets(app.getPath('userData'), liste));
+
+// Propositions de liens : noms des .md sous un dossier (profondeur et nombre
+// bornés, aucun contenu lu). Renvoie { dossier, fichiers } ou { erreur }.
+ipcMain.handle('folder:list-md-relatifs', async (_e, dossier) => {
+  try { return await listerMdRelatifs(dossier); }
+  catch (e) { return { erreur: e.message }; }
 });

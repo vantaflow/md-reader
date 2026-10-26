@@ -293,7 +293,7 @@ const pause = (ms) => h.attendre(ms);
   }; true`);
   const barre = await h.jsonJs(`(() => {
     const b = document.getElementById('barre-format');
-    const boutons = Array.from(b.querySelectorAll('button'));
+    const boutons = Array.from(b.querySelectorAll('button[data-format]'));
     const cm = document.querySelector('#editor .cm-editor');
     return {
       ids: boutons.map((x) => x.dataset.format),

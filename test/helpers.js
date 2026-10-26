@@ -28,7 +28,7 @@ function creerHarnais({ delaiMs = DELAI_MAX_MS } = {}) {
 
   // Canaux IPC par défaut : le renderer parle au processus principal dès son
   // démarrage ; sans stub la sortie est noyée sous « no handler registered ».
-  const parDefaut = { 'file:watch': () => null, 'file:read': () => null, 'folder:refresh': () => null, 'folder:search': () => null, 'recent:add': () => null, 'app:version': () => app.getVersion(), 'app:open-repo': () => true };
+  const parDefaut = { 'file:watch': () => null, 'file:read': () => null, 'folder:refresh': () => null, 'folder:search': () => null, 'recent:add': () => null, 'app:version': () => app.getVersion(), 'app:open-repo': () => true, 'correcteur:langues': () => [], 'snippets:lire': () => [], 'folder:list-md-relatifs': () => ({ erreur: 'non simulé' }) };
 
   function stub(canal, fn) {
     ipcMain.removeHandler(canal);

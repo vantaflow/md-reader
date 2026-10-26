@@ -40,6 +40,7 @@
     delaiAutosave: 2,
     synchroDefilement: true,
     rouvrirOnglets: false,
+    correcteur: 'fr-en',
     // État d'interface mémorisé (en-tête, panneau latéral)
     voletCode: false,
     panneauLateral: true,
@@ -54,6 +55,7 @@
     modeDefaut: ['continu', 'a4', 'a4-double'],
     theme: ['clair', 'sombre', 'systeme'],
     pdfFormat: ['A4', 'Letter', 'Legal', 'A3', 'A5'],
+    correcteur: ['aucun', 'fr', 'en', 'fr-en'],
   };
 
   function valide(cle, valeur) {

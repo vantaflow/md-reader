@@ -79,6 +79,9 @@ function initEditor() {
     raccourcis: window.mdr && window.mdr.format ? window.mdr.format.raccourcisEditeur : [],
     // Images collées ou glissées (features/images.js).
     onImages: (fichiers, o) => window.mdr.images.inserer(fichiers, o),
+    // Correcteur orthographique (réglage) et propositions de liens/emoji (features/liens.js).
+    correcteur: reglages.get('correcteur'),
+    propositionsLiens: (type, saisie) => (window.mdr.liens ? window.mdr.liens.propositions(type, saisie) : Promise.resolve([])),
   });
 }
 
@@ -1233,6 +1236,7 @@ Object.assign(window.mdr = window.mdr || {}, {
   palette: window.palette,
   commandes: window.commands,
   apercu: () => preview,
+  dossier: () => folderRoot,
   onglets: {
     liste: () => tabs.slice(),
     actif: () => activeTab,
@@ -1240,6 +1244,7 @@ Object.assign(window.mdr = window.mdr || {}, {
     nouveau: newTab,
     activer: setActiveTab,
     enregistrer: saveFile,
+    marquerModifie: markDirty,
   },
 });
 

@@ -77,6 +77,7 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 ### Confort — arrive en 1.9.0
 Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Historique des versions** (menu Fichier → « Historique des versions… », palette) : un instantané du document est pris à **chaque enregistrement** (y compris l'enregistrement automatique) dans le dossier de données de l'application, `historique/<empreinte du chemin>/<horodatage>.md`. Un contenu identique au dernier instantané n'est pas dupliqué ; au plus **50 versions par document** sont gardées (les plus anciennes sont supprimées), 5 Mo au plus par version. La fenêtre liste les versions (date, taille), affiche le contenu (**Aperçu**) ou la **comparaison ligne à ligne** avec le texte actuel (lignes ajoutées en vert, supprimées en rouge barré). **Restaurer** prend d'abord un instantané de l'état courant (même non enregistré), puis remplace le contenu de l'éditeur en une seule transaction : `Cmd/Ctrl+Z` revient en arrière. Un document non enregistré affiche un message. Les trois canaux IPC (`historique:ajouter`, `historique:lister`, `historique:lire`) n'acceptent qu'un chemin markdown absolu, un texte et un identifiant de version au format strict
+- **Rechercher les mises à jour** (menu Aide → « Rechercher les mises à jour… », palette) : le processus principal lit `https://api.github.com/repos/vantaflow/md-reader/releases/latest` (délai de 8 s, `User-Agent` explicite), compare les numéros de version (semver, préversions comprises) et la fenêtre annonce « Vous avez la dernière version » ou « La version X est disponible » avec les **notes de version** (affichées en texte brut). **Télécharger** ouvre dans le navigateur l'installeur de votre système (`.dmg` arm64 ou x64 sur macOS, `Setup … .exe` sur Windows) ou, à défaut, la page de la version ; l'adresse est revalidée côté principal (https, `github.com/vantaflow/md-reader/` uniquement) et **l'installation n'est jamais lancée sans votre clic ni par l'application**. Les cas « aucune release publiée » (404), limite de requêtes de GitHub, erreur réseau, délai dépassé et réponse invalide affichent chacun un message. Réglage **Réglages → Général → « Vérifier les mises à jour au démarrage »** (désactivé par défaut) : au plus une vérification par jour, silencieuse sauf si une version plus récente existe. **Limite** : les tests simulent `fetch` (réponses, 404, 403, erreurs, JSON invalide, délai) ; l'appel réel à GitHub, l'ouverture réelle du navigateur et l'installation d'une mise à jour n'ont pas été testés, et aucune release n'est publiée par ce chantier
 
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
@@ -122,7 +123,7 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - Les exports reprennent l'aperçu tel quel — KaTeX déjà composé, diagrammes déjà rendus en SVG
 
 ### Sécurité & confidentialité
-- **Zéro télémétrie**, 100 % local — aucun appel réseau, aucune donnée ne quitte votre machine
+- **Zéro télémétrie**, 100 % local — aucune donnée ne quitte votre machine. Seule exception depuis la 1.9.0 : la **vérification des mises à jour**, qui lit la dernière release publique de GitHub (une requête en lecture, sans envoyer de donnée de votre document) et uniquement quand vous la demandez ou, si vous l'avez activé (désactivé par défaut), au démarrage, une fois par jour au plus
 - **Content Security Policy** stricte : un `.md` ouvert depuis l'extérieur ne peut ni exécuter de `<script>`, ni déclencher un `onerror=`, ni charger une ressource distante
 - **Mermaid en `securityLevel: 'strict'`** : pas de HTML arbitraire dans les libellés de diagramme
 
@@ -182,7 +183,7 @@ Ces réglages sont conservés d'une session à l'autre, dans un magasin unique (
 | Éditeur | Police et taille, retour à la ligne, numéros de ligne, tabulation, barre d'outils | Voir Réglages → Éditeur |
 | Aperçu | Police, taille, marges des feuilles A4 | Voir Réglages → Aperçu |
 | Export PDF | Format, orientation, marges, numéros de page, page de garde, filigrane | La modale d'export s'ouvre pré-remplie |
-| Général | Enregistrement automatique et délai, synchro du défilement, onglets rouverts | Voir Réglages → Général |
+| Général | Enregistrement automatique et délai, synchro du défilement, onglets rouverts, objectif de mots, vérification des mises à jour au démarrage (désactivée) | Voir Réglages → Général |
 
 La fenêtre s'ouvre **maximisée** au démarrage.
 

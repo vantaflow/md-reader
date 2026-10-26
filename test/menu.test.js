@@ -86,7 +86,7 @@ test('Ouvrir récent : liste vide, entrée désactivée', () => {
 
 test('Aide : aide-mémoire, raccourcis, à propos (menu de l’app sous macOS)', () => {
   const aide = aplatir(menu(base('win32'), 'Aide').submenu).map((i) => i.label).filter(Boolean);
-  assert.deepStrictEqual(aide, ['Aide-mémoire Markdown', 'Raccourcis clavier', 'À propos de MD Reader']);
+  assert.deepStrictEqual(aide, ['Aide-mémoire Markdown', 'Raccourcis clavier', 'Rechercher les mises à jour…', 'À propos de MD Reader']);
   const aideMac = aplatir(menu(base('darwin'), 'Aide').submenu).map((i) => i.label).filter(Boolean);
   assert.ok(!aideMac.includes('À propos de MD Reader'));
   assert.ok(aplatir(menu(base('darwin'), 'MD Reader').submenu).some((i) => i.label === 'À propos de MD Reader'));
@@ -186,4 +186,14 @@ test('Affichage : mode présentation lecture (raccourci, sans doublon) et Statis
   assert.strictEqual(lecture.accelerator, 'CmdOrCtrl+Alt+L');
   lecture.click(); stats.click();
   assert.deepStrictEqual(envoyes, [['menu:commande', 'vue:lecture'], ['menu:commande', 'stats:ouvrir']]);
+});
+
+test('Aide : « Rechercher les mises à jour… » envoie la commande aide:maj (aussi sous macOS)', () => {
+  for (const pf of ['win32', 'darwin']) {
+    envoyes.length = 0;
+    const e = menu(base(pf), 'Aide').submenu.find((i) => i.label === 'Rechercher les mises à jour…');
+    assert.ok(e, 'entrée absente');
+    e.click();
+    assert.deepStrictEqual(envoyes, [['menu:commande', 'aide:maj']]);
+  }
 });

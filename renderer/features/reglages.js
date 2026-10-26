@@ -50,6 +50,7 @@
         { cle: 'synchroDefilement', libelle: 'Synchroniser le défilement éditeur et aperçu', type: 'case' },
         { cle: 'rouvrirOnglets', libelle: 'Rouvrir les onglets au démarrage', type: 'case' },
         { cle: 'objectifMots', libelle: 'Objectif de mots du document (0 : aucun)', type: 'nombre', min: 0, max: 1000000, pas: 100 },
+        { cle: 'verifierMaj', libelle: 'Vérifier les mises à jour au démarrage (une fois par jour au plus ; contacte GitHub)', type: 'case' },
         { cle: 'correcteur', libelle: 'Correcteur orthographique', type: 'liste', options: [['fr-en', 'Français et anglais'], ['fr', 'Français'], ['en', 'Anglais'], ['aucun', 'Désactivé']] },
       ],
     },

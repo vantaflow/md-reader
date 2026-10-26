@@ -11,6 +11,7 @@ const contexte = require('./contexte.js');
 const presse = require('./presse-papiers.js');
 const { lireFichierImport } = require('./importation.js');
 const historique = require('./historique.js');
+const miseajour = require('./miseajour.js');
 const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
@@ -651,6 +652,13 @@ ipcMain.handle('correcteur:langues', (_e, choix) => appliquerLanguesCorrecteur(t
 
 // Snippets : un fichier JSON dans le dossier de données de l'application, jamais
 // ailleurs ; la liste est assainie et bornée à chaque lecture et écriture.
+// Mises à jour : unique accès réseau de l'application, déclenché par
+// l'utilisateur ou (réglage activable, désactivé par défaut) au démarrage, une
+// fois par jour au plus. Lecture seule de la dernière release GitHub ; rien
+// n'est téléchargé ni installé, l'ouverture passe par une adresse revalidée.
+ipcMain.handle('miseajour:verifier', (_e, charge) => miseajour.traiter(charge, { versionActuelle: app.getVersion(), plateforme: process.platform, arch: process.arch }));
+ipcMain.handle('miseajour:telecharger', (_e, url) => miseajour.ouvrirTelechargement(url, (u) => shell.openExternal(u)));
+
 // Historique des versions : chemin markdown absolu, contenu texte borné et
 // identifiant de version au format strict sont revérifiés par historique.js ;
 // l'écriture ne sort jamais de <données>/historique/<hash>/.

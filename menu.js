@@ -175,6 +175,7 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
       submenu: [
         { label: 'Aide-mémoire Markdown', click: commande('aide:memo') },
         { label: 'Raccourcis clavier', click: commande('aide:raccourcis') },
+        { label: 'Rechercher les mises à jour…', click: commande('aide:maj') },
         ...(isMac ? [] : [{ type: 'separator' }, { label: `À propos de ${nomApp}`, click: commande('aide:apropos') }]),
       ],
     },

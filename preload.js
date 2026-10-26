@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('api', {
   historiqueAjouter: (payload) => ipcRenderer.invoke('historique:ajouter', payload),
   historiqueLister: (chemin) => ipcRenderer.invoke('historique:lister', chemin),
   historiqueLire: (payload) => ipcRenderer.invoke('historique:lire', payload),
+  verifierMiseAJour: (charge) => ipcRenderer.invoke('miseajour:verifier', charge),
+  ouvrirTelechargement: (url) => ipcRenderer.invoke('miseajour:telecharger', url),
   pleinEcran: (actif) => ipcRenderer.invoke('fenetre:plein-ecran', !!actif),
   print: (payload) => ipcRenderer.invoke('file:print', payload),
   setDefaultMarkdown: () => ipcRenderer.invoke('app:set-default-md'),

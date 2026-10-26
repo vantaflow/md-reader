@@ -56,3 +56,11 @@ body.lecture-actif.focus-apercu main #preview { max-width: 52rem; margin: 0 auto
 .stats-sections td:nth-child(n+2) { text-align: right; white-space: nowrap; color: var(--fg-muted); }
 .stats-frequents { display: flex; flex-wrap: wrap; gap: 6px; }
 .stats-mot { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+
+/* ---------- Mises à jour ---------- */
+.modal-content.maj { width: min(520px, 94vw); max-height: 86vh; overflow: auto; }
+.maj-message { margin: 8px 0; font-size: 14px; }
+.maj-erreur { color: #dc2626; }
+.maj-asset, .maj-note { font-size: 12px; color: var(--fg-muted); }
+.maj-notes { white-space: pre-wrap; max-height: 30vh; overflow: auto; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: var(--bg-alt); }
+.maj button[hidden] { display: none; }

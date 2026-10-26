@@ -11,6 +11,7 @@ const fs = require('fs');
 const os = require('os');
 const { creerHarnais } = require('./helpers.js');
 const historique = require('../historique.js');
+const miseajour = require('../miseajour.js');
 
 const h = creerHarnais();
 const { check } = h;
@@ -22,9 +23,29 @@ const poserDoc = (texte) => h.js(`(() => { window.mdr.editeur().setValue(${JSON.
   const dossierTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdr-lot2d-'));
   const racineDonnees = () => h.dossierDonnees;
   const plein = [];
+  // Mises à jour : le VRAI code de miseajour.js, avec un `fetch` simulé (aucun appel réseau).
+  const base = 'https://github.com/vantaflow/md-reader/releases';
+  const release = (tag) => ({
+    tag_name: tag, name: 'MD Reader ' + tag, body: 'Notes de la version.\n- une nouveauté <b>pas du html</b>', html_url: `${base}/tag/${tag}`,
+    assets: [
+      { name: `MD Reader-${tag.slice(1)}-arm64.dmg`, browser_download_url: `${base}/download/${tag}/MD-arm64.dmg` },
+      { name: `MD Reader-${tag.slice(1)}-x64.dmg`, browser_download_url: `${base}/download/${tag}/MD-x64.dmg` },
+      { name: `MD Reader Setup ${tag.slice(1)}.exe`, browser_download_url: `${base}/download/${tag}/Setup.exe` },
+    ],
+  });
+  let scenario = { statut: 200, corps: release('v1.9.0') };
+  let appelsReseau = 0;
+  const fauxFetch = async () => {
+    appelsReseau++;
+    if (scenario.reseau) throw new Error('fetch failed');
+    return { status: scenario.statut, ok: scenario.statut < 300, headers: { get: (n) => (scenario.entetes || {})[n.toLowerCase()] ?? null }, text: async () => (typeof scenario.corps === 'string' ? scenario.corps : JSON.stringify(scenario.corps)) };
+  };
+  const ouvertes = [];
   await h.demarrer({
     stubs: {
       'fenetre:plein-ecran': (_e, actif) => { plein.push(!!actif); return true; },
+      'miseajour:verifier': (_e, charge) => miseajour.traiter(charge, { fetch: fauxFetch, versionActuelle: '1.8.0', plateforme: process.platform, arch: process.arch }),
+      'miseajour:telecharger': (_e, url) => miseajour.ouvrirTelechargement(url, async (u) => { ouvertes.push(u); }),
       'file:save': async (_e, { filePath, content }) => { fs.writeFileSync(filePath, content); return filePath; },
       'historique:ajouter': async (_e, c) => { try { return await historique.ajouter(racineDonnees(), c.chemin, c.contenu); } catch (e) { return { ajoute: false, erreur: e.message }; } },
       'historique:lister': async (_e, chemin) => { try { return { versions: await historique.lister(racineDonnees(), chemin) }; } catch (e) { return { versions: [], erreur: e.message }; } },
@@ -193,6 +214,76 @@ const poserDoc = (texte) => h.js(`(() => { window.mdr.editeur().setValue(${JSON.
   await pause(200);
   check('Stats — document vide : modale sans erreur', /Rien à analyser/.test(await h.js(`document.getElementById('stats-lisibilite').textContent`)));
   await h.js(`document.getElementById('stats-fermer').click(); true`);
+
+  // ─── Tâche 19 : vérification des mises à jour (fetch simulé) ───────────────
+  const lancerMaj = async () => { await commande('aide:maj'); await pause(400); };
+  const texteMaj = () => h.js(`document.getElementById('maj-modale') ? document.getElementById('maj-modale').textContent : ''`);
+  const fermerMaj = () => h.js(`document.getElementById('maj-fermer') && document.getElementById('maj-fermer').click(); true`);
+
+  await lancerMaj();
+  check('Maj — nouvelle version : message « La version 1.9.0 est disponible »', /La version 1\.9\.0 est disponible/.test(await texteMaj()), await texteMaj());
+  check('Maj — l’installeur de la plateforme est proposé', new RegExp(process.arch === 'arm64' ? 'arm64\\.dmg' : process.platform === 'darwin' ? 'x64\\.dmg' : 'Setup').test(await h.js(`document.getElementById('maj-asset').textContent`)));
+  check('Maj — notes de version affichées en texte (aucun HTML interprété)', /une nouveauté <b>pas du html<\/b>/.test(await h.js(`document.getElementById('maj-notes').textContent`)) && (await h.js(`document.querySelectorAll('#maj-notes b').length`)) === 0);
+  check('Maj — le bouton Télécharger est visible', await h.js(`!document.getElementById('maj-telecharger').hidden`));
+  check('Maj — rien n’est ouvert tant qu’on n’a pas cliqué', ouvertes.length === 0);
+  await h.js(`document.getElementById('maj-telecharger').click(); true`);
+  await pause(300);
+  check('Maj — « Télécharger » ouvre l’adresse GitHub validée (une seule fois)', ouvertes.length === 1 && /^https:\/\/github\.com\/vantaflow\/md-reader\/releases\/download\//.test(ouvertes[0]), JSON.stringify(ouvertes));
+  check('Maj — la modale reste ouverte avec un retour à l’utilisateur', /Page ouverte/.test(await texteMaj()));
+  const refusMaj = await h.js(`window.mdr.miseajour.telecharger('https://evil.example/installeur.exe')`);
+  await pause(200);
+  check('Maj — une adresse hors du dépôt est refusée et rien n’est ouvert', refusMaj.ok === false && ouvertes.length === 1 && /Échec/.test(await texteMaj()));
+  await fermerMaj();
+
+  scenario = { statut: 200, corps: release('v1.8.0') };
+  await lancerMaj();
+  check('Maj — même version : « Vous avez la dernière version »', /Vous avez la dernière version \(1\.8\.0\)/.test(await texteMaj()) && await h.js(`document.getElementById('maj-telecharger').hidden`));
+  await fermerMaj();
+  scenario = { statut: 404, corps: { message: 'Not Found' } };
+  await lancerMaj();
+  check('Maj — 404 : aucune release publiée, pas de bouton Télécharger', /Aucune version n’a encore été publiée/.test(await texteMaj()) && await h.js(`document.getElementById('maj-telecharger').hidden`));
+  await fermerMaj();
+  scenario = { statut: 403, corps: {}, entetes: { 'x-ratelimit-remaining': '0' } };
+  await lancerMaj();
+  check('Maj — limite de débit : message dédié', /Limite de requêtes/.test(await texteMaj()));
+  await fermerMaj();
+  scenario = { reseau: true };
+  await lancerMaj();
+  check('Maj — erreur réseau : message lisible, aucune exception', /Impossible de joindre GitHub/.test(await texteMaj()));
+  await fermerMaj();
+  scenario = { statut: 200, corps: '<html>pas du json' };
+  await lancerMaj();
+  check('Maj — JSON invalide : message lisible', /illisible/.test(await texteMaj()));
+  await fermerMaj();
+  scenario = { statut: 200, corps: release('v1.9.0') };
+
+  // Vérification au démarrage : désactivée par défaut, une fois par jour au plus.
+  check('Maj — Réglages → Général : « Vérifier au démarrage » décoché par défaut', await h.js(`(() => { const c = document.getElementById('reglage-verifierMaj'); return !!c && c.checked === false && c.closest('.reglages-panneau').dataset.panneau === 'general'; })()`));
+  await h.js(`window.mdrSettings.set('derniereVerifMaj', 0); true`);
+  const avant = appelsReseau;
+  await h.js(`window.mdr.miseajour.verifierAuDemarrage()`);
+  check('Maj — réglage désactivé : aucune requête au démarrage', appelsReseau === avant);
+  await h.js(`window.mdrSettings.set('verifierMaj', true); true`);
+  await h.js(`window.mdr.miseajour.verifierAuDemarrage()`);
+  await pause(300);
+  check('Maj — réglage activé : une requête, la modale propose la version disponible', appelsReseau === avant + 1 && /La version 1\.9\.0 est disponible/.test(await texteMaj()));
+  check('Maj — la date de dernière vérification est mémorisée', (await h.js(`window.mdrSettings.get('derniereVerifMaj')`)) > 0);
+  await fermerMaj();
+  await h.js(`window.mdr.miseajour.verifierAuDemarrage()`);
+  check('Maj — au plus une vérification par jour : pas de seconde requête', appelsReseau === avant + 1 && !(await h.js(`!!document.getElementById('maj-modale')`)));
+  await h.js(`window.mdrSettings.set('derniereVerifMaj', Date.now() - 25 * 3600 * 1000); window.mdr.miseajour.verifierAuDemarrage()`);
+  await pause(300);
+  check('Maj — plus d’un jour après : nouvelle vérification', appelsReseau === avant + 2);
+  await fermerMaj();
+  scenario = { statut: 200, corps: release('v1.8.0') };
+  await h.js(`window.mdrSettings.set('derniereVerifMaj', 0); window.mdr.miseajour.verifierAuDemarrage()`);
+  await pause(300);
+  check('Maj — au démarrage, déjà à jour : aucune modale (silencieux)', !(await h.js(`!!document.getElementById('maj-modale')`)));
+  scenario = { reseau: true };
+  await h.js(`window.mdrSettings.set('derniereVerifMaj', 0); window.mdr.miseajour.verifierAuDemarrage()`);
+  await pause(300);
+  check('Maj — au démarrage, erreur réseau : aucune modale (silencieux)', !(await h.js(`!!document.getElementById('maj-modale')`)));
+  await h.js(`window.mdrSettings.set('verifierMaj', false); true`);
 
   fs.rmSync(dossierTmp, { recursive: true, force: true });
   h.terminer();

@@ -15,6 +15,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 ## 📑 Sommaire
 
 - [Nouveautés](#-nouveautés)
+- [Prochaines versions](#️-prochaines-versions)
 - [Fonctionnalités](#-fonctionnalités)
 - [Aperçu de l'interface](#-aperçu-de-linterface)
 - [Lecteur Markdown par défaut](#-lecteur-markdown-par-défaut)
@@ -49,9 +50,31 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - Fenêtre **Réglages** (`Cmd/Ctrl+,`), menus Affichage, Format, Aide et documents récents, barre de mise en forme
 - **Export Word (.docx)**, modes aperçu seul et éditeur seul, images collées ou glissées copiées dans `images/`
 
-**Prévu pour la prochaine version** — l'éditeur de diagrammes visuel s'étendra aux autres types Mermaid (classes, états, Gantt, entités-relations, parcours utilisateur, camembert, frise…) ; aujourd'hui il couvre l'organigramme et la séquence, les autres types restent modifiables en code
-
 **1.7.1** — aperçu en pages A4 par défaut ; une liste ou un tableau plus long qu'une page se coupe d'une feuille à l'autre
+
+---
+
+## 🗺️ Prochaines versions
+
+**Prévu**
+- **Éditeur de diagrammes visuel pour tous les types Mermaid** : classes, états, Gantt, entités-relations, parcours utilisateur, camembert, frise chronologique, quadrant, mindmap (aujourd'hui : organigramme et séquence ; les autres types restent modifiables en code)
+- **Mode Document** : pagination exacte à l'écran (vraies pages au lieu d'un repère tous les 297 mm), recherche et remplacement dans la page, emoji rendus dans la page, alignement et retrait dans les listes et les cellules
+- **Import Word** : images extraites dans `images/` à l'enregistrement au lieu de rester intégrées
+- **Export Word** : formules KaTeX en équations Word, diagrammes Mermaid en images, largeur des tableaux adaptée à tous les formats de page
+- **Copie en HTML riche** : diagrammes et formules convertis en images pour Outlook, Teams et Word
+- **Application signée et notariée** (macOS et Windows) pour supprimer l'avertissement au premier lancement, avec installation de la mise à jour en un clic
+
+**Pistes à l'étude**
+- Assistant IA intégré : reformuler, résumer, traduire, générer un plan
+- Dictée vocale
+- Citations et bibliographie (BibTeX)
+- Autres diagrammes : PlantUML, graphiques à partir d'un tableau, schémas dessinés à la main
+- Commentaires et annotations, suivi des modifications façon Word
+- Intégration Git (statut, commit, diff visuel) et publication en un clic (page web, Gist, wiki)
+- Champs dynamiques (`{{date}}`, `{{version}}`, variables du front-matter) et fusion de plusieurs documents en un seul PDF
+- Synchronisation des réglages, modèles et snippets entre plusieurs postes
+- Raccourcis clavier personnalisables
+- Vérification des liens, images et ancres avant l'export
 
 ---
 

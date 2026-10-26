@@ -222,13 +222,19 @@ const poserDoc = (texte) => h.js(`(() => { window.mdr.editeur().setValue(${JSON.
 
   await lancerMaj();
   check('Maj — nouvelle version : message « La version 1.9.0 est disponible »', /La version 1\.9\.0 est disponible/.test(await texteMaj()), await texteMaj());
-  check('Maj — l’installeur de la plateforme est proposé', new RegExp(process.arch === 'arm64' ? 'arm64\\.dmg' : process.platform === 'darwin' ? 'x64\\.dmg' : 'Setup').test(await h.js(`document.getElementById('maj-asset').textContent`)));
+  // Pas d'installeur publié pour Linux : la page de la version est proposée.
+  const linux = process.platform === 'linux';
+  const assetMaj = await h.js(`document.getElementById('maj-asset').textContent`);
+  check('Maj — l’installeur de la plateforme est proposé',
+    linux ? !/\.dmg|\.exe/.test(assetMaj)
+      : new RegExp(process.platform === 'darwin' ? (process.arch === 'arm64' ? 'arm64\\.dmg' : 'x64\\.dmg') : 'Setup').test(assetMaj), assetMaj);
   check('Maj — notes de version affichées en texte (aucun HTML interprété)', /une nouveauté <b>pas du html<\/b>/.test(await h.js(`document.getElementById('maj-notes').textContent`)) && (await h.js(`document.querySelectorAll('#maj-notes b').length`)) === 0);
   check('Maj — le bouton Télécharger est visible', await h.js(`!document.getElementById('maj-telecharger').hidden`));
   check('Maj — rien n’est ouvert tant qu’on n’a pas cliqué', ouvertes.length === 0);
   await h.js(`document.getElementById('maj-telecharger').click(); true`);
   await pause(300);
-  check('Maj — « Télécharger » ouvre l’adresse GitHub validée (une seule fois)', ouvertes.length === 1 && /^https:\/\/github\.com\/vantaflow\/md-reader\/releases\/download\//.test(ouvertes[0]), JSON.stringify(ouvertes));
+  check('Maj — « Télécharger » ouvre l’adresse GitHub validée (une seule fois)', ouvertes.length === 1 && (linux ? /^https:\/\/github\.com\/vantaflow\/md-reader\/releases\/tag\//
+    : /^https:\/\/github\.com\/vantaflow\/md-reader\/releases\/download\//).test(ouvertes[0]), JSON.stringify(ouvertes));
   check('Maj — la modale reste ouverte avec un retour à l’utilisateur', /Page ouverte/.test(await texteMaj()));
   const refusMaj = await h.js(`window.mdr.miseajour.telecharger('https://evil.example/installeur.exe')`);
   await pause(200);

@@ -1,5 +1,5 @@
 // Tâche 5 — export Word (.docx) : génère un .docx d'un document riche via le
-// vrai convertisseur du renderer, le dézippe (unzip système) et vérifie le XML
+// vrai convertisseur du renderer, le dézippe (JSZip, via test/outils/zip.js) et vérifie le XML
 // élément par élément. Le dialogue d'enregistrement est stubé (canal IPC).
 const path = require('path');
 const fs = require('fs');
@@ -33,8 +33,16 @@ function png(l, hh, [r, g, b]) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), morceau('IHDR', ihdr), morceau('IDAT', zlib.deflateSync(brut)), morceau('IEND', Buffer.alloc(0))]);
 }
 
-const decompresser = (fichier, interne) => execFileSync('unzip', ['-p', fichier, interne.replace(/[\[\]]/g, '\\$&')], { maxBuffer: 64 * 1024 * 1024 }).toString('utf8');
-const liste = (fichier) => execFileSync('unzip', ['-Z1', fichier]).toString('utf8').split('\n').filter(Boolean);
+// Lecture du zip par JSZip, en Node (Electron lancé en mode Node) : pas
+// d'`unzip` système, absent sous Windows.
+const OUTIL_ZIP = path.join(__dirname, 'outils', 'zip.js');
+const zipOutil = (args) => execFileSync(process.execPath, [OUTIL_ZIP, ...args], {
+  env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, maxBuffer: 64 * 1024 * 1024,
+});
+const lireEntree = (fichier, interne) => zipOutil(['lire', fichier, interne]);
+const decompresser = (fichier, interne) => lireEntree(fichier, interne).toString('utf8');
+const liste = (fichier) => zipOutil(['lister', fichier]).toString('utf8').split('\n').filter(Boolean);
+const verifierZip = (fichier) => zipOutil(['verifier', fichier]);
 
 const SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="60"><rect width="120" height="60" fill="red"/></svg>');
 const PNG_DATA = 'data:image/png;base64,' + png(40, 20, [0, 128, 0]).toString('base64');
@@ -131,8 +139,8 @@ Après le saut
 
   // ── Le fichier s'ouvre : zip valide, parties obligatoires ──
   let parties = [];
-  try { parties = liste(sortie); execFileSync('unzip', ['-tq', sortie]); check('Word — l’archive zip est valide (unzip -t)', true); }
-  catch (e) { check('Word — l’archive zip est valide (unzip -t)', false, String(e)); }
+  try { parties = liste(sortie); verifierZip(sortie); check('Word — l’archive zip est valide', true); }
+  catch (e) { check('Word — l’archive zip est valide', false, String(e)); }
   check('Word — [Content_Types].xml, _rels/.rels et word/document.xml présents',
     ['[Content_Types].xml', '_rels/.rels', 'word/document.xml', 'word/styles.xml', 'word/numbering.xml'].every((p) => parties.includes(p)), parties.join(','));
   const types = parties.includes('[Content_Types].xml') ? decompresser(sortie, '[Content_Types].xml') : '';
@@ -204,7 +212,7 @@ Après le saut
   check('Word — image data URI 40×20', Math.round(tailles[2][0]) === 40 && Math.round(tailles[2][1]) === 20, JSON.stringify(tailles[2]));
   check('Word — image SVG 120×60 (rastérisée)', Math.round(tailles[3][0]) === 120 && Math.round(tailles[3][1]) === 60, JSON.stringify(tailles[3]));
   check('Word — légendes de figures présentes', /Figure 1 — Petite locale/.test(xml));
-  const bad = media.map((m) => execFileSync('unzip', ['-p', sortie, m], { maxBuffer: 64 * 1024 * 1024 })).every((b) => b[0] === 0x89 && b[1] === 0x50);
+  const bad = media.map((m) => lireEntree(sortie, m)).every((b) => b[0] === 0x89 && b[1] === 0x50);
   check('Word — les octets embarqués sont de vrais png', bad);
 
   // Bloc de code
@@ -233,7 +241,7 @@ Après le saut
   await h.attendre(300);
   await h.js(`window.mdr.exportDocx.exporter()`);
   let videOk = false;
-  try { execFileSync('unzip', ['-tq', sortie]); videOk = /<w:body>/.test(decompresser(sortie, 'word/document.xml')); } catch { videOk = false; }
+  try { verifierZip(sortie); videOk = /<w:body>/.test(decompresser(sortie, 'word/document.xml')); } catch { videOk = false; }
   check('Word — document vide : fichier valide', videOk);
 
   fs.rmSync(dossier, { recursive: true, force: true });

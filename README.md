@@ -45,6 +45,31 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Front-matter YAML** reconnu et masqué de l'aperçu (`--- title: … ---`)
 - **Statistiques live** : nombre de mots, de caractères et temps de lecture estimé
 
+### Mode Document et ruban Word — 1.10.0
+
+Un second mode d'édition, à côté du mode code : le document s'édite **directement dans une page A4 mise en forme** (façon Word / Typora), sous un ruban à trois onglets. Le fichier reste du **Markdown** : le mode code et le mode Document sont deux vues du même texte.
+
+- **Bascule** : bouton « Mode Document » de l'en-tête, menu Affichage, palette (`Mode Document`, `Mode code`, `Basculer…`, `Cmd/Ctrl+Maj+M`) et Réglages > Éditeur > *Mode d'édition par défaut*.
+- **Base technique** : ProseMirror (modules `prosemirror-*`, MIT), bundlé par esbuild comme l'éditeur de code (`renderer/document-bundle.js`). Choisi plutôt que TipTap (surcouche supplémentaire sans bénéfice ici) et Milkdown (chaîne remark + ProseMirror, moins de maîtrise sur la réécriture) : le schéma, l'analyse (lexeur `marked`, le même moteur que l'aperçu) et la sérialisation sont écrits sur mesure dans `renderer/document/`, ce qui garantit l'aller-retour.
+- **Aller-retour sans perte** : titres, paragraphes, listes (puces, numérotées, tâches, imbriquées), tableaux (alignements), code, citations, liens, images, encadrés (`> [!NOTE]` et `:::note`), notes de bas de page, formules, diagrammes Mermaid, front-matter, sauts de page, sommaire `[[toc]]`, liens wiki et HTML en ligne. Un document **non modifié** revient à l'octet près ; modifié, il est réécrit de façon canonique (puces `-`, `1.`, tableaux compacts…). Ce qui n'a pas d'équivalent (HTML en bloc, directives inconnues, définitions de liens…) est gardé tel quel dans un « bloc brut » modifiable par double-clic.
+- **Ruban** — *Accueil* : annuler / rétablir, police, taille, gras / italique / souligné / barré / code, couleur du texte, surlignage, listes (puces, numéros, tâches), retraits, alignement, styles (Normal, Titre 1-3, Citation, Code), effacer la mise en forme. *Insertion* : tableau (choix de taille), image, diagramme, lien, saut de page, ligne horizontale, symbole / emoji, sommaire, note de bas de page, formule, encadré. *Mise en page* : format, marges, orientation, en-tête, pied de page, numéros de page — ce sont les réglages de l'export PDF et de l'aperçu A4 (et ils se retrouvent dans l'export Word) — et « Styles du document… ».
+- **Mise en forme ponctuelle** : police, taille, couleur, surlignage et souligné d'une sélection s'écrivent en HTML en ligne (`<span style="…">`, `<u>`, `<mark>`) et sont conservés dans l'aperçu, les exports PDF / HTML et l'export Word. Alignement et retrait : enveloppe `<div align="center" style="margin-left:2em">` autour du paragraphe.
+- **Styles du document** : `police`, `taille` (points), `couleur-titres` et `couleur-texte` dans le front-matter, appliqués à l'aperçu, au mode Document et aux exports PDF, HTML et Word :
+
+  ```yaml
+  ---
+  title: Rapport
+  police: Georgia, serif
+  taille: 12
+  couleur-titres: "#1a5276"
+  couleur-texte: "#222222"
+  ---
+  ```
+- **Tableaux** : ajouter / supprimer lignes et colonnes, alignement de colonne, ligne d'en-tête, menu contextuel (clic droit), `Tab` pour passer à la cellule suivante. La **fusion de cellules n'existe pas** : le Markdown ne sait pas la représenter, l'entrée du menu est affichée désactivée avec cette explication.
+- **Éditeur de diagramme visuel** (Mermaid, sans code) : modale ouverte depuis Insertion, menu Format, palette, barre d'outils du mode code, **double-clic sur un diagramme** de l'aperçu ou de la page. Organigramme : nœuds (rectangle, arrondi, losange, cercle), texte, liens (flèche, trait, pointillé, épais) avec texte, direction TB / LR / BT / RL, déplacement sur le canevas, liaison par glisser depuis la poignée, par *Maj+clic* ou par le bouton « Relier », aperçu Mermaid en direct. Séquence : participants et messages en liste. Les positions sont mémorisées dans un commentaire `%% mdr:pos`. Un diagramme non reconnu (sous-graphes, styles, notes, boucles…) s'ouvre **en lecture seule** avec un message et n'est jamais réécrit.
+- **Raccourcis** : `Cmd/Ctrl+B / I / U`, `Cmd/Ctrl+K` (lien), `Cmd/Ctrl+Alt+1..3` (titres), listes `Cmd/Ctrl+Maj+7/8/9`, `Cmd/Ctrl+Entrée` (saut de page), `Cmd/Ctrl+Z` et `Cmd/Ctrl+Maj+Z` ; le menu Édition > Annuler / Rétablir utilise le même historique.
+- **Limites connues** : pas de fusion de cellules ; l'alignement et le retrait ne s'appliquent pas aux éléments de liste ni aux cellules ; les pages sont indiquées par un trait tous les 297 mm (pas de pagination exacte à l'écran, l'aperçu A4 et le PDF restent la référence) ; pas de recherche dans le document en mode Document (utiliser le mode code) ; les emoji `:nom:` restent du texte dans la page ; un lien de référence `[x][ref]` est converti en lien direct, sa définition est conservée en fin de document ; les fins de ligne et le front-matter sont conservés, mais un document modifié est réécrit en forme canonique ; la largeur des tableaux de l'export Word suppose une page A4.
+
 ### Écriture — arrive en 1.9.0
 Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Éditeur de tableau visuel** (menu Format, barre de mise en forme, palette, `Cmd/Ctrl+Alt+Shift+T`) : une grille de cellules modifiables, ajout et suppression de lignes et de colonnes, alignement par colonne (gauche, centre, droite). Il s'ouvre sur le tableau Markdown sous le curseur (qu'il remplace, colonnes alignées, à « Appliquer ») ou en crée un nouveau

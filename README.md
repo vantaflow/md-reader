@@ -45,6 +45,7 @@ Construit avec [Electron](https://www.electronjs.org/) + [CodeMirror 6](https://
 - **Front-matter YAML** reconnu et masqué de l'aperçu (`--- title: … ---`)
 - **Statistiques live** : nombre de mots, de caractères et temps de lecture estimé
 
+<<<<<<< HEAD
 ### Mode Document et ruban Word — 1.10.0
 
 Un second mode d'édition, à côté du mode code : le document s'édite **directement dans une page A4 mise en forme** (façon Word / Typora), sous un ruban à trois onglets. Le fichier reste du **Markdown** : le mode code et le mode Document sont deux vues du même texte.
@@ -72,6 +73,9 @@ Un second mode d'édition, à côté du mode code : le document s'édite **direc
 
 ### Écriture — arrive en 1.9.0
 Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
+=======
+### Écriture
+>>>>>>> amelioration/lots-1-2
 - **Éditeur de tableau visuel** (menu Format, barre de mise en forme, palette, `Cmd/Ctrl+Alt+Shift+T`) : une grille de cellules modifiables, ajout et suppression de lignes et de colonnes, alignement par colonne (gauche, centre, droite). Il s'ouvre sur le tableau Markdown sous le curseur (qu'il remplace, colonnes alignées, à « Appliquer ») ou en crée un nouveau
 - **Reformater le Markdown** (menu Format, palette, `Cmd/Ctrl+Alt+Shift+F` pour le document, `Cmd/Ctrl+Alt+Shift+R` pour la sélection) : listes numérotées renumérotées, puces homogènes (`-`), tableaux alignés, espaces de fin retirés, lignes vides multiples réduites. Les blocs de code et le front-matter ne sont jamais touchés ; un saut de ligne forcé (deux espaces en fin de ligne, suivis d'une ligne de texte) est conservé. L'annulation (`Cmd/Ctrl+Z`) rétablit l'état d'avant
 - **Emoji** : `:nom:` (environ 350 noms courants, à la GitHub) est proposé après `:xx` dans l'éditeur et converti dans l'aperçu et les exports, jamais dans le code ni dans un bloc de code ; le texte source reste `:nom:`
@@ -80,20 +84,28 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Snippets** (palette → « Insérer un snippet… », « Enregistrer la sélection comme snippet… », « Supprimer un snippet… ») : textes réutilisables conservés dans un fichier `snippets.json` du dossier de données de l'application ; quelques exemples au premier lancement ; `{{date}}` est remplacé par la date du jour
 - **Correcteur orthographique français et anglais** : le correcteur natif d'Electron souligne les fautes dans l'éditeur ; clic droit sur un mot souligné : suggestions du dictionnaire, « Ajouter au dictionnaire », puis couper, copier, coller. Le choix des langues (français, anglais, les deux, désactivé) est dans **Réglages → Général**, appliqué immédiatement. Sous macOS, le correcteur du système est utilisé : ses langues se gèrent dans les Réglages Système ; sous Windows et Linux, les dictionnaires se téléchargent au premier usage
 
-### Navigation — arrive en 1.9.0
-Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
+### Navigation
 - **Panneau Plan du document** (onglet « Plan » de la barre latérale, ancien « Menu ») : les sections du texte source, indentées par niveau (titres `#` à `######`, hors blocs de code et front-matter). Un clic place le curseur de l'éditeur sur le titre et fait défiler l'aperçu jusqu'à la section ; la section qui contient le curseur est surlignée. **Glisser une entrée sur une autre** déplace la section avec ses sous-sections, avant ou après la cible selon la moitié survolée ; le niveau de la section déplacée s'aligne sur celui de la cible (ses sous-sections suivent, entre 1 et 6) ; un seul `Cmd/Ctrl+Z` annule le déplacement. Les titres soulignés (`===`, `---`) ne forment pas de section
 - **Liens wiki** `[[note]]` et `[[note|texte]]` : rendus en liens dans l'aperçu (jamais dans le code), cliquables. La note est cherchée par nom de fichier, sans extension et sans tenir compte de la casse, d'abord dans le dossier du document puis dans tout le dossier ouvert (à défaut de dossier ouvert, dans celui du document) ; elle s'ouvre dans un onglet. Une note introuvable est proposée à la création (après confirmation), à côté du document, avec un nom de fichier nettoyé (jamais hors de ce dossier). `[[note#Section]]` ouvre la note sur la section. `[[toc]]` reste réservé au sommaire
 - **Rétroliens** (sous le plan, onglet « Plan ») : les `.md` du dossier ouvert qui citent le document courant par `[[nom]]` ou par un lien relatif, avec un extrait de la ligne ; un clic ouvre le document. Le scan est confiné au dossier ouvert (4 niveaux, 500 fichiers, 2 Mo par fichier, 100 résultats), en lecture seule
 - **Favoris** : l'étoile d'une ligne de l'arbre (ou la commande de palette « Épingler/Désépingler le document ») épingle un fichier ; la section « Favoris » s'affiche en haut de l'onglet Fichiers (✕ pour retirer) et la liste est mémorisée dans les réglages
 - **Filtre par tags** : les tags du front-matter (`tags: [a, b]`, `tags: a, b` ou liste YAML `- a`) des `.md` du dossier ouvert sont proposés dans l'onglet Fichiers ; cliquer sur un tag filtre l'arborescence (plusieurs tags se cumulent), le champ de saisie restreint la liste des tags et le filtre ; « Effacer le filtre » rétablit l'arbre. Seuls les 16 premiers Ko de chaque fichier sont lus
-- **Rechercher/remplacer dans tout le dossier** (onglet Recherche, ou palette → « Rechercher/remplacer dans le dossier… ») : le champ de recherche existant, un champ « Remplacer par » et trois options (casse, mot entier, expression régulière avec `$1`, `$&`). **Aperçu des changements** affiche, par fichier, chaque occurrence avant/après (ligne par ligne) avec une case à cocher par fichier et par occurrence ; **Appliquer** demande confirmation puis écrit. Le remplacement ne touche que les `.md` du dossier ouvert (tout chemin hors dossier est refusé), écrit de façon atomique (fichier temporaire puis renommage) et relit chaque fichier : un fichier modifié depuis l'aperçu est sauté et signalé. Un fichier dont l'onglet a des modifications non enregistrées est ignoré ; les autres onglets concernés sont rechargés. Bornes : 500 caractères de recherche, 2 000 de remplacement, 500 occurrences par fichier, 5 000 au total, 2 Mo par fichier ; une expression invalide ou qui reconnaît la chaîne vide affiche un message, sans exception
+- **Rechercher/remplacer dans tout le dossier** (onglet Recherche, ou palette → « Rechercher/remplacer dans le dossier… ») : le champ de recherche existant, un champ « Remplacer par » et trois options (casse, mot entier, expression régulière avec `$1`, `$&`). **Aperçu des changements** affiche, par fichier, chaque occurrence avant/après (ligne par ligne) avec une case à cocher par fichier et par occurrence ; **Appliquer** demande confirmation puis écrit. Le remplacement ne touche que les `.md` du dossier ouvert (tout chemin hors dossier est refusé), écrit de façon atomique (fichier temporaire puis renommage) et relit chaque fichier : un fichier modifié depuis l'aperçu est sauté et signalé. Un fichier dont l'onglet a des modifications non enregistrées est ignoré ; les autres onglets concernés sont rechargés. Bornes : 500 caractères de recherche, 2 000 de remplacement, 500 occurrences par fichier, 5 000 au total, 2 Mo par fichier ; une expression invalide ou qui reconnaît la chaîne vide affiche un message, sans exception ; la recherche d'un document est limitée à 1,5 s : une expression à retour arrière catastrophique (comme `(a+)+$`) est interrompue et signalée (« trop de temps à s'exécuter ») au lieu de figer l'application
 
-### Export et partage — arrive en 1.9.0
-Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
+### Export et partage
 - **Thèmes d'export PDF et HTML** : *Sobre* (sans empattement, filets fins), *Rapport* (titres colorés, en-têtes de tableau pleins avec bandes, marges latérales de 12 mm) et *Académique* (serif, texte justifié avec césure, titres numérotés 1, 1.1, 1.1.1, retrait de première ligne, tableaux à trois filets, marges de 20 mm). Le thème se choisit dans la modale d'export PDF, dans une petite liste à l'export HTML, et son défaut se règle dans **Réglages → Export PDF**. Ces règles n'existent que dans les documents exportés : l'aperçu et l'application ne changent pas
-- **CSS personnalisé** (Réglages → Export PDF) : un texte libre, 20 000 caractères au plus, inséré dans l'export **après** le thème (il a donc le dernier mot) ; toute balise (`</style>`, `<script>`, commentaires HTML) en est retirée avant l'insertion
+- **CSS personnalisé** (Réglages → Export PDF) : un texte libre, 20 000 caractères au plus, inséré dans l'export **après** le thème (il a donc le dernier mot) ; toute balise (`</style>`, `<script>`, commentaires HTML) et toute règle `@import` en sont retirées avant l'insertion
 - **Copier en HTML riche** (menu Édition, palette, `Cmd/Ctrl+Alt+Shift+C`) : la sélection (ou le document entier, sans son front-matter, quand rien n'est sélectionné) est rendue en HTML aux **styles en ligne** — titres, tableaux avec bordures et `border="1"`, code, citations, liens, images en data URI — et posée dans le presse-papiers avec `text/html` et `text/plain` (le Markdown source). Les clients de courrier ignorent les feuilles de style, d'où les styles en ligne. **Limite** : le collage réel dans Outlook, Teams ou Word n'a pas été testé (les tests relisent le contenu du presse-papiers système, pas le résultat dans ces applications) ; les diagrammes Mermaid et les formules KaTeX ne sont pas convertis en images pour la copie
+- **Export EPUB 3** (menu Fichier → « Exporter en EPUB… », palette) : une archive conforme à la norme (fichier `mimetype` en premier et non compressé, `META-INF/container.xml`, `content.opf` avec titre, auteur et langue lus du front-matter — `title`, `author`, `lang` —, `nav.xhtml` pour la table des matières, **un chapitre par titre 1**, feuille de style, images rangées dans `OEBPS/images`). Le HTML rendu est converti en XHTML valide (balises vides auto-fermées, entités, scripts et gestionnaires retirés) ; un lien interne vers un autre chapitre est réécrit vers son fichier. Les images locales et intégrées sont incluses ; une image distante (http) est remplacée par son texte alternatif ; les diagrammes Mermaid sont inclus en SVG (certaines liseuses n'affichent pas le texte des diagrammes). Les tests vérifient l'archive et la validité XML (DOMParser) ; l'ouverture dans une liseuse réelle n'a pas été testée
+- **Diaporama** (menu Affichage → « Diaporama », palette, `F5`) : une ligne qui ne contient que `---` sépare deux slides (sauf dans le front-matter, dans un bloc de code, et sous une ligne de texte où elle reste un titre de niveau 2 — laissez une ligne vide avant `---` pour séparer). Vue plein écran avec le rendu Markdown de la slide ; `→` `↓` `Espace` `PageDown` `Entrée` : suivante ; `←` `↑` `PageUp` : précédente ; `Début` / `Fin` ; `G` : aperçu en vignettes (un clic saute à la slide) ; `Échap` : sortir ; le numéro `3 / 12` s'affiche en bas à droite
+- **Export PDF des slides** (menu Fichier → « Exporter les slides en PDF… », palette) : une slide par page, en paysage 16:9 (13,333 × 7,5 pouces, sans marge ni numéro de page système), par le chemin d'export PDF existant avec une taille de page sur mesure ; une slide plus haute que la page est coupée (jamais de page supplémentaire)
+- **Import Word (.docx) et HTML vers Markdown** (menu Fichier → « Importer… », palette « Importer un document Word ou HTML… ») : mammoth convertit le .docx en HTML, turndown (avec le plugin GFM) le convertit en Markdown — titres, listes (à puces, numérotées, imbriquées), tableaux (la première ligne devient l'en-tête), gras, italique, barré, listes de tâches, liens, images, blocs de code (styles Word « Code », « Source Code »…). Un HTML importé est d'abord nettoyé (scripts, styles, cadres, objets, commentaires, attributs `on…` et liens `javascript:` retirés). Le résultat s'ouvre dans un **nouvel onglet non enregistré**. **Images d'un .docx : elles restent intégrées au Markdown en data URI** (l'onglet n'étant pas enregistré, il n'y a pas encore de dossier `images/` où les écrire) ; le fichier source est lu par le processus principal, limité à 50 Mo, et un fichier invalide affiche un message sans exception. Un test relit un .docx exporté par l'application (titres, listes, tableau, gras, image conservés)
+
+### Confort
+- **Historique des versions** (menu Fichier → « Historique des versions… », palette) : un instantané du document est pris à **chaque enregistrement** (y compris l'enregistrement automatique) dans le dossier de données de l'application, `historique/<empreinte du chemin>/<horodatage>.md`. Un contenu identique au dernier instantané n'est pas dupliqué ; au plus **50 versions par document** sont gardées (les plus anciennes sont supprimées), 5 Mo au plus par version. La fenêtre liste les versions (date, taille), affiche le contenu (**Aperçu**) ou la **comparaison ligne à ligne** avec le texte actuel (lignes ajoutées en vert, supprimées en rouge barré). **Restaurer** prend d'abord un instantané de l'état courant (même non enregistré), puis remplace le contenu de l'éditeur en une seule transaction : `Cmd/Ctrl+Z` revient en arrière. Un document non enregistré affiche un message. Les trois canaux IPC (`historique:ajouter`, `historique:lister`, `historique:lire`) n'acceptent qu'un chemin markdown absolu, un texte et un identifiant de version au format strict
+- **Mode présentation lecture** (menu Affichage, palette, `Cmd/Ctrl+Alt+L`) : l'aperçu en plein écran pour lire ou présenter (distinct du diaporama : pas de découpage en slides). Taille du texte ajustable (`A−` / `A+`, touches `-` et `+`, de 12 à 56 px), **défilement automatique** à vitesse réglable de 1 à 10 (`Espace` : lecture/pause, flèches `↑` `↓` : vitesse) ; la barre de contrôle se masque après 2,5 s sans activité et réapparaît au moindre mouvement ; `Échap` quitte. Rien n'est mémorisé
+- **Statistiques avancées** (clic sur les statistiques de la barre d'état, menu Affichage, palette « Statistiques… ») : mots, caractères, phrases, **temps de lecture** total et **par section**, **objectif de mots** avec barre de progression (réglé dans **Réglages → Général**, 0 pour aucun, rappelé dans la barre d'état), **indice de lisibilité** (Kandel-Moles pour le français, Flesch pour l'anglais, langue détectée automatiquement) et mots les plus fréquents. Seule la prose est analysée : front-matter, blocs de code, code en ligne et balises sont écartés
+- **Rechercher les mises à jour** (menu Aide → « Rechercher les mises à jour… », palette) : le processus principal lit `https://api.github.com/repos/vantaflow/md-reader/releases/latest` (délai de 8 s, `User-Agent` explicite), compare les numéros de version (semver, préversions comprises) et la fenêtre annonce « Vous avez la dernière version » ou « La version X est disponible » avec les **notes de version** (affichées en texte brut). **Télécharger** ouvre dans le navigateur l'installeur de votre système (`.dmg` arm64 ou x64 sur macOS, `Setup … .exe` sur Windows) ou, à défaut, la page de la version ; l'adresse est revalidée côté principal (https, `github.com/vantaflow/md-reader/` uniquement) et **l'installation n'est jamais lancée sans votre clic ni par l'application**. Les cas « aucune release publiée » (404), limite de requêtes de GitHub, erreur réseau, délai dépassé et réponse invalide affichent chacun un message. Réglage **Réglages → Général → « Vérifier les mises à jour au démarrage »** (désactivé par défaut) : au plus une vérification par jour, silencieuse sauf si une version plus récente existe. **Limite** : les tests simulent `fetch` (réponses, 404, 403, erreurs, JSON invalide, délai) ; l'appel réel à GitHub, l'ouverture réelle du navigateur et l'installation d'une mise à jour n'ont pas été testés, et aucune release n'est publiée par ce chantier
 
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
@@ -139,7 +151,7 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - Les exports reprennent l'aperçu tel quel — KaTeX déjà composé, diagrammes déjà rendus en SVG
 
 ### Sécurité & confidentialité
-- **Zéro télémétrie**, 100 % local — aucun appel réseau, aucune donnée ne quitte votre machine
+- **Zéro télémétrie**, 100 % local — aucune donnée ne quitte votre machine. Seule exception : la **vérification des mises à jour**, qui lit la dernière release publique de GitHub (une requête en lecture, sans envoyer de donnée de votre document) et uniquement quand vous la demandez ou, si vous l'avez activé (désactivé par défaut), au démarrage, une fois par jour au plus
 - **Content Security Policy** stricte : un `.md` ouvert depuis l'extérieur ne peut ni exécuter de `<script>`, ni déclencher un `onerror=`, ni charger une ressource distante
 - **Mermaid en `securityLevel: 'strict'`** : pas de HTML arbitraire dans les libellés de diagramme
 
@@ -199,7 +211,7 @@ Ces réglages sont conservés d'une session à l'autre, dans un magasin unique (
 | Éditeur | Police et taille, retour à la ligne, numéros de ligne, tabulation, barre d'outils | Voir Réglages → Éditeur |
 | Aperçu | Police, taille, marges des feuilles A4 | Voir Réglages → Aperçu |
 | Export PDF | Format, orientation, marges, numéros de page, page de garde, filigrane | La modale d'export s'ouvre pré-remplie |
-| Général | Enregistrement automatique et délai, synchro du défilement, onglets rouverts | Voir Réglages → Général |
+| Général | Enregistrement automatique et délai, synchro du défilement, onglets rouverts, objectif de mots, vérification des mises à jour au démarrage (désactivée) | Voir Réglages → Général |
 
 La fenêtre s'ouvre **maximisée** au démarrage.
 
@@ -235,9 +247,11 @@ La fenêtre s'ouvre **maximisée** au démarrage.
 | Bloc de code | `Cmd/Ctrl+Alt+C` |
 | Citation | `Cmd/Ctrl+Shift+.` |
 | Saut de page | `Cmd/Ctrl+Enter` |
-| Éditeur de tableau (1.9.0) | `Cmd/Ctrl+Alt+Shift+T` |
-| Reformater le document / la sélection (1.9.0) | `Cmd/Ctrl+Alt+Shift+F` / `R` |
-| Copier en HTML riche (1.9.0) | `Cmd/Ctrl+Alt+Shift+C` |
+| Éditeur de tableau | `Cmd/Ctrl+Alt+Shift+T` |
+| Reformater le document / la sélection | `Cmd/Ctrl+Alt+Shift+F` / `R` |
+| Copier en HTML riche | `Cmd/Ctrl+Alt+Shift+C` |
+| Diaporama | `F5` |
+| Mode présentation lecture | `Cmd/Ctrl+Alt+L` |
 | Aperçu seul plein écran | `Cmd/Ctrl+Shift+F` |
 | Éditeur seul sans distraction | `Cmd/Ctrl+Shift+D` |
 | Zoom de l'interface | `Cmd/Ctrl+Plus` / `-` / `0` |
@@ -345,7 +359,10 @@ md-to-pdf-app/
 ├── images.js                   # Enregistrement borné des images collées dans images/ (sans Electron)
 ├── contexte.js                 # Menu contextuel et langues du correcteur orthographique (sans Electron)
 ├── remplacement.js             # Rechercher/remplacer : expressions, occurrences avant/après, bornes (sans Electron)
-├── presse-papiers.js           # Validation et écriture du presse-papiers HTML riche (sans Electron, 1.9.0)
+├── importation.js              # Lecture bornée (50 Mo) d'un fichier à importer (sans Electron)
+├── presse-papiers.js           # Validation et écriture du presse-papiers HTML riche (sans Electron)
+├── historique.js               # Historique des versions : instantanés, plafond, lecture bornée (sans Electron)
+├── miseajour.js               # Vérification des mises à jour : API GitHub, semver, adresse revalidée (sans Electron)
 ├── donnees.js                  # Snippets (snippets.json), liste bornée des .md d'un dossier, tags et rétroliens (sans Electron)
 ├── preload.js                  # Bridge contextIsolation entre main et renderer
 ├── pdf.js                      # Options de rendu, lecture des destinations d'un PDF,
@@ -358,15 +375,23 @@ md-to-pdf-app/
 │   │   ├── settings.js         #   magasin des réglages (valeurs par défaut, migration, onChange)
 │   │   ├── raccourcis.js       #   table unique des raccourcis (menus, aide, éditeur)
 │   │   ├── format.js           #   mise en forme Markdown (gras, titres, listes, tableau…)
-│   │   ├── tableau.js          #   tableaux GFM : analyse, sérialisation alignée, repérage (1.9.0)
-│   │   ├── reformat.js         #   reformatage du Markdown (1.9.0)
-│   │   ├── plan.js             #   sections du texte source et déplacement d'une section (1.9.0)
-│   │   ├── wiki.js             #   liens wiki : analyse, résolution d'une note, rétroliens (1.9.0)
-│   │   ├── tags.js             #   tags du front-matter, comptage, filtrage de l'arbre (1.9.0)
-│   │   ├── emoji.js            #   table des emoji :nom:, suggestions, remplacement (1.9.0)
-│   │   ├── liens.js            #   chemins relatifs et noms de notes pour les liens (1.9.0)
-│   │   ├── modeles.js          #   modèles de documents (1.9.0)
-│   │   └── snippets.js         #   snippets : assainissement, ajout, suppression (1.9.0)
+│   │   ├── tableau.js          #   tableaux GFM : analyse, sérialisation alignée, repérage
+│   │   ├── reformat.js         #   reformatage du Markdown
+│   │   ├── plan.js             #   sections du texte source et déplacement d'une section
+│   │   ├── wiki.js             #   liens wiki : analyse, résolution d'une note, rétroliens
+│   │   ├── tags.js             #   tags du front-matter, comptage, filtrage de l'arbre
+│   │   ├── emoji.js            #   table des emoji :nom:, suggestions, remplacement
+│   │   ├── liens.js            #   chemins relatifs et noms de notes pour les liens
+│   │   ├── modeles.js          #   modèles de documents
+│   │   ├── snippets.js         #   snippets : assainissement, ajout, suppression
+│   │   ├── themes-export.js    #   thèmes d'export PDF/HTML et nettoyage du CSS personnalisé
+│   │   ├── html-riche.js       #   HTML aux styles en ligne pour « Copier en HTML riche »
+│   │   ├── epub.js             #   construction de l'archive EPUB 3 (XHTML, OPF, nav)
+│   │   ├── diaporama.js        #   découpage en slides et options PDF 16:9
+│   │   ├── import.js           #   nettoyage du HTML importé, conversion turndown
+│   │   ├── diff.js             #   comparaison ligne à ligne (historique)
+│   │   ├── lecture.js          #   mode présentation lecture : taille, vitesse, défilement
+│   │   └── statistiques.js     #   statistiques avancées : lisibilité, objectif, temps par section
 │   ├── features/               # Fonctions de l'interface, chargées avant renderer.js :
 │   │   ├── reglages.js         #   fenêtre Réglages
 │   │   ├── format.js           #   commandes Format et barre d'outils
@@ -374,21 +399,31 @@ md-to-pdf-app/
 │   │   ├── export-docx.js      #   export Word
 │   │   ├── modes.js            #   aperçu seul plein écran, éditeur sans distraction
 │   │   ├── images.js           #   images collées ou glissées
-│   │   ├── modale.js           #   modales génériques : fenêtre, saisie, choix dans une liste (1.9.0)
-│   │   ├── tableau.js          #   éditeur de tableau visuel (1.9.0)
-│   │   ├── reformat.js         #   commandes de reformatage (1.9.0)
-│   │   ├── plan.js             #   panneau Plan : clic, section courante, glisser-déposer (1.9.0)
-│   │   ├── wiki.js             #   clic sur les liens wiki, panneau Rétroliens (1.9.0)
-│   │   ├── favoris.js          #   fichiers épinglés (1.9.0)
-│   │   ├── tags.js             #   filtre par tags dans l'onglet Fichiers (1.9.0)
-│   │   ├── remplacer.js        #   rechercher/remplacer dans le dossier, aperçu et application (1.9.0)
+│   │   ├── modale.js           #   modales génériques : fenêtre, saisie, choix dans une liste
+│   │   ├── tableau.js          #   éditeur de tableau visuel
+│   │   ├── reformat.js         #   commandes de reformatage
+│   │   ├── plan.js             #   panneau Plan : clic, section courante, glisser-déposer
+│   │   ├── wiki.js             #   clic sur les liens wiki, panneau Rétroliens
+│   │   ├── favoris.js          #   fichiers épinglés
+│   │   ├── tags.js             #   filtre par tags dans l'onglet Fichiers
+│   │   ├── remplacer.js        #   rechercher/remplacer dans le dossier, aperçu et application
 │   │   ├── rendu.js            #   rendu détaché partagé (copie HTML riche, EPUB, diaporama, 1.9.0)
-│   │   ├── copier-html.js      #   Copier en HTML riche (1.9.0)
-│   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
-│   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
-│   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
-│   │   └── correcteur.js       #   réglage du correcteur orthographique (1.9.0)
+│   │   ├── copier-html.js      #   Copier en HTML riche
+│   │   ├── export-epub.js      #   Export EPUB
+│   │   ├── diaporama.js        #   Diaporama plein écran et export PDF des slides
+│   │   ├── import.js           #   Importer un .docx ou un .html en Markdown
+│   │   ├── liens.js            #   propositions de liens vers les .md
+│   │   ├── modeles.js          #   Nouveau depuis un modèle
+│   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet
+│   │   ├── correcteur.js       #   réglage du correcteur orthographique
+│   │   ├── historique.js       #   historique des versions : liste, aperçu, comparaison, restauration
+│   │   ├── lecture.js          #   mode présentation lecture
+│   │   ├── statistiques.js     #   fenêtre des statistiques avancées
+│   │   └── miseajour.js        #   Rechercher les mises à jour
 │   ├── docx-src.js             # Conversion HTML vers .docx (bibliothèque docx, bundlée par esbuild)
+│   ├── jszip-src.js            # Entrée navigateur de JSZip pour l'export EPUB (bundlée par esbuild, 1.9.0)
+│   ├── import-src.js           # Entrée navigateur de mammoth et turndown pour l'import (bundlée par esbuild, 1.9.0)
+│   ├── lot2d.css               # Styles de l'historique, de la lecture, des statistiques et des mises à jour
 │   ├── docx-bundle.js          # Bundle généré (ignoré par git)
 │   ├── editor-src.js           # Source CodeMirror 6 (bundlée par esbuild)
 │   ├── editor-bundle.js        # Bundle généré (ignoré par git)
@@ -408,16 +443,21 @@ md-to-pdf-app/
 ├── test/format.test.js         # Mise en forme Markdown
 ├── test/menu.test.js           # Menus, raccourcis, documents récents
 ├── test/images.test.js         # Images collées : noms, collisions, écriture bornée
-├── test/tableau.test.js        # Tableaux GFM (1.9.0)
-├── test/export-partage.test.js # Thèmes d'export, CSS personnalisé, HTML riche, presse-papiers (1.9.0)
-├── test/reformat.test.js       # Reformatage Markdown (1.9.0)
-├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs (1.9.0)
-├── test/modeles-snippets.test.js # Modèles, snippets, menu contextuel, liste des .md (1.9.0)
-├── test/plan.test.js           # Plan du document : sections, déplacement (1.9.0)
-├── test/navigation.test.js     # Liens wiki, rétroliens, tags, rendu des liens wiki (1.9.0)
-├── test/dossier.test.js        # IPC bornées du dossier ouvert : tags, rétroliens (1.9.0)
-├── test/remplacement.test.js   # Rechercher/remplacer : expressions, groupes, bornes (1.9.0)
-├── test/remplacement-dossier.test.js # Aperçu et application dans un dossier : confinement, empreinte (1.9.0)
+├── test/tableau.test.js        # Tableaux GFM
+├── test/export-partage.test.js # Thèmes d'export, CSS personnalisé, HTML riche, presse-papiers
+├── test/import.test.js         # Import : nettoyage du HTML hostile, conversion, lecture bornée
+├── test/epub-diaporama.test.js # EPUB (archive, XHTML), diaporama (découpage, HTML et options PDF)
+├── test/reformat.test.js       # Reformatage Markdown
+├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs
+├── test/modeles-snippets.test.js # Modèles, snippets, menu contextuel, liste des .md
+├── test/plan.test.js           # Plan du document : sections, déplacement
+├── test/navigation.test.js     # Liens wiki, rétroliens, tags, rendu des liens wiki
+├── test/dossier.test.js        # IPC bornées du dossier ouvert : tags, rétroliens
+├── test/remplacement.test.js   # Rechercher/remplacer : expressions, groupes, bornes
+├── test/remplacement-dossier.test.js # Aperçu et application dans un dossier : confinement, empreinte
+├── test/historique.test.js     # Historique des versions : instantanés, plafond, confinement
+├── test/statistiques.test.js   # Statistiques avancées : lisibilité, objectif, temps par section
+├── test/miseajour.test.js      # Mises à jour : semver, réponses GitHub simulées, adresse refusée
 ├── test/helpers.js             # Aide commune aux tests Electron (fenêtre invisible, check)
 ├── test/smoke.js               # Test de fumée end-to-end, sous Electron
 ├── test/smoke-lot1.js          # Réglages, menus, barre de mise en forme, préférences
@@ -427,6 +467,7 @@ md-to-pdf-app/
 ├── test/smoke-lot2a.js         # Écriture 1.9.0 : tableau, reformatage, emoji, liens, modèles, snippets, correcteur
 ├── test/smoke-lot2b.js         # Navigation 1.9.0 : plan, liens wiki, rétroliens, favoris, tags, rechercher/remplacer
 ├── test/smoke-lot2c.js         # Export et partage 1.9.0 : thèmes, HTML riche, EPUB, diaporama, import
+├── test/smoke-lot2d.js         # Confort 1.9.0 : historique, mode lecture, statistiques, mises à jour
 ├── .github/workflows/ci.yml        # CI : test de fumée macOS / Linux / Windows
 ├── .github/workflows/release.yml   # CI : build & publication des installateurs
 ├── installer.iss               # Script Inno Setup (installateur Windows alternatif)
@@ -462,8 +503,8 @@ boîte d'impression système, pour que son sommaire porte lui aussi ses numéros
 | Script | Description |
 |---|---|
 | `npm start` | Bundle le renderer + lance l'app en dev |
-| `npm run bundle` | Bundle `renderer/editor-src.js`, `renderer/markdown-src.js` et `renderer/docx-src.js` vers `editor-bundle.js`, `markdown-bundle.js` et `docx-bundle.js` (esbuild, minifié) |
-| `npm test` | Tests unitaires (moteur Markdown, chaîne PDF, empaquetage, réglages, mise en forme, menus, images ; `node --test`, sans Electron) puis tests de fumée end-to-end sous Electron (`smoke`, `smoke-lot1`, `smoke-docx`, `smoke-focus`, `smoke-images`), tous sans fenêtre visible |
+| `npm run bundle` | Bundle `editor-src.js`, `markdown-src.js`, `docx-src.js`, `jszip-src.js` et `import-src.js` (dans `renderer/`) vers `editor-bundle.js`, `markdown-bundle.js`, `docx-bundle.js`, `jszip-bundle.js` et `import-bundle.js` (esbuild, minifié) |
+| `npm test` | Tests unitaires (moteur Markdown, chaîne PDF, empaquetage, réglages, mise en forme, menus, images, tableaux, reformatage, modèles, plan, navigation, rechercher/remplacer, export et partage, EPUB, import, historique, statistiques, mises à jour ; `node --test`, sans Electron) puis tests de fumée end-to-end sous Electron (`smoke`, `smoke-lot1`, `smoke-docx`, `smoke-focus`, `smoke-images`, `smoke-lot2a`, `smoke-lot2b`, `smoke-lot2c`, `smoke-lot2d`), tous sans fenêtre visible |
 | `npm run build` | Build des installateurs pour la plateforme courante |
 | `npm run build:mac` | Build `.dmg` (arm64 + x64) |
 | `npm run build:win` | Build installateur NSIS |

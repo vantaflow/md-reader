@@ -102,3 +102,24 @@ test('reinitialiser remet les défauts', () => {
   s.reinitialiser();
   assert.equal(s.get('tailleEditeur'), 14);
 });
+
+test('objectifMots : 0 par défaut, borné entre 0 et 1 000 000, nombre uniquement', () => {
+  const s = creer(stockage());
+  assert.equal(s.get('objectifMots'), 0);
+  s.set('objectifMots', 1500);
+  assert.equal(s.get('objectifMots'), 1500);
+  assert.throws(() => s.set('objectifMots', -1), TypeError);
+  assert.throws(() => s.set('objectifMots', 1000001), TypeError);
+  assert.throws(() => s.set('objectifMots', '500'), TypeError);
+});
+
+test('mises à jour : vérification au démarrage désactivée par défaut, date de dernière vérification ≥ 0', () => {
+  const s = creer(stockage());
+  assert.equal(s.get('verifierMaj'), false);
+  assert.equal(s.get('derniereVerifMaj'), 0);
+  s.set('verifierMaj', true);
+  s.set('derniereVerifMaj', 1800000000000);
+  assert.equal(s.get('derniereVerifMaj'), 1800000000000);
+  assert.throws(() => s.set('derniereVerifMaj', -5), TypeError);
+  assert.throws(() => s.set('verifierMaj', 'oui'), TypeError);
+});

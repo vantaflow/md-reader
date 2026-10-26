@@ -4,11 +4,14 @@ const { existsSync } = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const chokidar = require('chokidar');
-const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
+const { pdfOptions, pageSizePrint, tailleSurMesure, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
 const presse = require('./presse-papiers.js');
+const { lireFichierImport } = require('./importation.js');
+const historique = require('./historique.js');
+const miseajour = require('./miseajour.js');
 const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
@@ -421,8 +424,8 @@ ipcMain.handle('file:print', async (_e, { html, options }) => {
     await new Promise((resolve) => {
       win.webContents.print({
         printBackground: true,
-        landscape: !!options?.landscape,
-        pageSize: options?.pageSize || 'A4',
+        landscape: !!options?.landscape && !tailleSurMesure(options?.pageSize),
+        pageSize: pageSizePrint(options || {}),
         margins: { marginType: 'custom', top: m, bottom: m, left: m, right: m },
       }, () => resolve());
     });
@@ -649,6 +652,32 @@ ipcMain.handle('correcteur:langues', (_e, choix) => appliquerLanguesCorrecteur(t
 
 // Snippets : un fichier JSON dans le dossier de données de l'application, jamais
 // ailleurs ; la liste est assainie et bornée à chaque lecture et écriture.
+// Mises à jour : unique accès réseau de l'application, déclenché par
+// l'utilisateur ou (réglage activable, désactivé par défaut) au démarrage, une
+// fois par jour au plus. Lecture seule de la dernière release GitHub ; rien
+// n'est téléchargé ni installé, l'ouverture passe par une adresse revalidée.
+ipcMain.handle('miseajour:verifier', (_e, charge) => miseajour.traiter(charge, { versionActuelle: app.getVersion(), plateforme: process.platform, arch: process.arch }));
+ipcMain.handle('miseajour:telecharger', (_e, url) => miseajour.ouvrirTelechargement(url, (u) => shell.openExternal(u)));
+
+// Historique des versions : chemin markdown absolu, contenu texte borné et
+// identifiant de version au format strict sont revérifiés par historique.js ;
+// l'écriture ne sort jamais de <données>/historique/<hash>/.
+const borne = (v) => (v && typeof v === 'object' ? v : {});
+ipcMain.handle('historique:ajouter', async (_e, c) => {
+  const { chemin, contenu } = borne(c);
+  try { return await historique.ajouter(app.getPath('userData'), chemin, contenu); }
+  catch (e) { return { ajoute: false, erreur: e.message }; }
+});
+ipcMain.handle('historique:lister', async (_e, chemin) => {
+  try { return { versions: await historique.lister(app.getPath('userData'), chemin) }; }
+  catch (e) { return { versions: [], erreur: e.message }; }
+});
+ipcMain.handle('historique:lire', async (_e, c) => {
+  const { chemin, id } = borne(c);
+  try { return { contenu: await historique.lire(app.getPath('userData'), chemin, id) }; }
+  catch (e) { return { erreur: e.message }; }
+});
+
 ipcMain.handle('snippets:lire', () => lireSnippets(app.getPath('userData')));
 ipcMain.handle('snippets:ecrire', (_e, liste) => ecrireSnippets(app.getPath('userData'), liste));
 
@@ -686,4 +715,34 @@ ipcMain.handle('folder:replace-apply', canalDossier((racine, c) => appliquerRemp
 ipcMain.handle('presse-papiers:ecrire-html', (_e, charge) => {
   try { return presse.ecrireHtml(clipboard, charge); }
   catch (e) { return { erreur: e.message }; }
+});
+
+// Export EPUB : le renderer construit l'archive (jszip) et fournit les octets ;
+// seul le chemin choisi dans la boîte d'enregistrement reçoit l'écriture. Octets
+// bornés (200 Mo) et signature de l'archive vérifiée.
+const MAX_EPUB = 200 * 1024 * 1024;
+ipcMain.handle('file:export-epub', async (_e, { octets, defaultName } = {}) => {
+  if (!octets || typeof octets.length !== 'number' || octets.length < 4 || octets.length > MAX_EPUB) return null;
+  const donnees = Buffer.from(octets);
+  if (donnees.readUInt32LE(0) !== 0x04034b50) return null; // pas une archive zip
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    filters: [{ name: 'EPUB', extensions: ['epub'] }],
+    defaultPath: (typeof defaultName === 'string' && defaultName ? defaultName : 'document') + '.epub',
+  });
+  if (canceled || !filePath) return null;
+  await fs.writeFile(filePath, donnees);
+  return filePath;
+});
+
+// Import .docx / .html / .htm : la boîte de dialogue choisit le fichier, la
+// lecture est bornée à 50 Mo (importation.js). Le renderer convertit en Markdown.
+// Renvoie { nom, type, octets }, { erreur } ou null si annulé.
+ipcMain.handle('file:import', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Importer un document',
+    filters: [{ name: 'Documents Word et HTML', extensions: ['docx', 'html', 'htm'] }],
+    properties: ['openFile'],
+  });
+  if (canceled || !filePaths.length) return null;
+  return lireFichierImport(filePaths[0]);
 });

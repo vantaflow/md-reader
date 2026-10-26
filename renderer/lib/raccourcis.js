@@ -54,6 +54,8 @@
     { id: 'vue:focus-apercu', groupe: 'Affichage', libelle: 'Aperçu seul en plein écran', accel: 'CmdOrCtrl+Shift+F' },
     { id: 'vue:focus-editeur', groupe: 'Affichage', libelle: 'Éditeur seul sans distraction', accel: 'CmdOrCtrl+Shift+D' },
     { id: 'vue:mode-edition', groupe: 'Affichage', libelle: 'Basculer mode code / mode Document', accel: 'CmdOrCtrl+Shift+M' },
+    { id: 'vue:lecture', groupe: 'Affichage', libelle: 'Mode présentation lecture', accel: 'CmdOrCtrl+Alt+L' },
+    { id: 'vue:diaporama', groupe: 'Affichage', libelle: 'Diaporama', accel: 'F5' },
     // Éditeur et général (sans entrée de menu)
     { id: 'format:souligne', groupe: 'Éditeur', libelle: 'Souligné', accel: 'CmdOrCtrl+U', menu: false },
     { id: 'editeur:rechercher', groupe: 'Éditeur', libelle: 'Rechercher dans le document', accel: 'CmdOrCtrl+F', menu: false },

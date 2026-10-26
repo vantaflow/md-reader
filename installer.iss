@@ -2,7 +2,11 @@
 ; Builds a single-file installer that registers .md file association.
 
 #define MyAppName "MD Reader"
+<<<<<<< HEAD
 #define MyAppVersion "1.10.0"
+=======
+#define MyAppVersion "1.9.0"
+>>>>>>> amelioration/lots-1-2
 #define MyAppPublisher "khalilbenaz"
 #define MyAppURL "https://github.com/vantaflow/md-to-pdf-app"
 #define MyAppExeName "MD Reader.exe"

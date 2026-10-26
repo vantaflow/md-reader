@@ -4,12 +4,35 @@
 // Mesuré sur Electron 32 : `generateDocumentOutline` seul ne produit aucun
 // signet, il lui faut l'arbre de structure du PDF balisé. Les deux ne se
 // séparent pas. Le balisage rend au passage le PDF accessible.
+//
+// `pageSize` est un nom de format (« A4 »…) ou, pour une page sur mesure comme
+// celle des slides, un objet { width, height } en pouces. Une taille sur mesure
+// est déjà orientée par ses deux dimensions : `landscape` est alors ignoré
+// (le conserver ferait pivoter la page une seconde fois).
+const TAILLE_MIN_POUCES = 1;
+const TAILLE_MAX_POUCES = 100;
+
+function tailleSurMesure(pageSize) {
+  if (!pageSize || typeof pageSize !== 'object') return null;
+  const { width, height } = pageSize;
+  const ok = (v) => typeof v === 'number' && Number.isFinite(v) && v >= TAILLE_MIN_POUCES && v <= TAILLE_MAX_POUCES;
+  return ok(width) && ok(height) ? { width, height } : null;
+}
+
+// Même taille pour `webContents.print`, qui attend des microns.
+function pageSizePrint(options = {}) {
+  const t = tailleSurMesure(options.pageSize);
+  if (t) return { width: Math.round(t.width * 25400), height: Math.round(t.height * 25400) };
+  return typeof options.pageSize === 'string' && options.pageSize ? options.pageSize : 'A4';
+}
+
 function pdfOptions(options = {}) {
   const m = options.margin ?? 0.5;
+  const surMesure = tailleSurMesure(options.pageSize);
   return {
     printBackground: true,
-    pageSize: options.pageSize || 'A4',
-    landscape: !!options.landscape,
+    pageSize: surMesure || (typeof options.pageSize === 'string' && options.pageSize ? options.pageSize : 'A4'),
+    landscape: surMesure ? false : !!options.landscape,
     margins: { top: m, bottom: m, left: m, right: m },
     displayHeaderFooter: !!options.headerFooter,
     headerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#666;">' + (options.headerText || '') + '</div>',
@@ -203,4 +226,4 @@ function tocSecondPass(html, pdfBuffer) {
   return numbered === html ? { needed: false, html } : { needed: true, html: numbered };
 }
 
-module.exports = { pdfOptions, destinationPages, fillTocPages, decodePdfName, hasTocSlots, tocSecondPass };
+module.exports = { pdfOptions, pageSizePrint, tailleSurMesure, destinationPages, fillTocPages, decodePdfName, hasTocSlots, tocSecondPass };

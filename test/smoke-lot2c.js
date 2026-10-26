@@ -10,9 +10,12 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { clipboard } = require('electron');
+const { clipboard, BrowserWindow } = require('electron');
+const JSZip = require('jszip');
+const { pdfOptions } = require('../pdf.js');
 const { creerHarnais } = require('./helpers.js');
 const presse = require('../presse-papiers.js');
+const { lireFichierImport } = require('../importation.js');
 
 const h = creerHarnais();
 const { check } = h;
@@ -27,10 +30,35 @@ const poserDoc = (texte, debut, fin) => h.js(`(() => {
 const commande = (id) => h.js(`window.commands.run(${JSON.stringify(id)})`);
 
 (async () => {
-  const sortie = { html: [], presse: [] };
+  let prochainImport = null;
+  const sortie = { html: [], presse: [], epub: [], pdf: [], plein: [] };
+  const dossierTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdr-lot2c-'));
   await h.demarrer({
     stubs: {
       'file:export-html': (_e, { html }) => { sortie.html.push(html); return '/tmp/faux.html'; },
+      // Import : le dialogue est remplacé par `prochainImport` (chemin ou résultat) ; la lecture est la VRAIE.
+      'file:import': async () => (typeof prochainImport === 'string' ? lireFichierImport(prochainImport) : prochainImport),
+      'fenetre:plein-ecran': (_e, actif) => { sortie.plein.push(!!actif); return true; },
+      // Export EPUB : même écriture que main.js (sans dialogue).
+      'file:export-epub': (_e, { octets, defaultName }) => {
+        const f = path.join(dossierTmp, defaultName + '.epub');
+        fs.writeFileSync(f, Buffer.from(octets));
+        sortie.epub.push(f);
+        return f;
+      },
+      // Export PDF : VRAI rendu Chromium avec le VRAI pdfOptions, sans dialogue.
+      'file:export-pdf': async (_e, { html, defaultName, options }) => {
+        const f = path.join(dossierTmp, defaultName + '.pdf');
+        const src = path.join(dossierTmp, defaultName + '.html');
+        fs.writeFileSync(src, html);
+        const w = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+        try {
+          await w.loadFile(src);
+          fs.writeFileSync(f, await w.webContents.printToPDF(pdfOptions(options)));
+        } finally { w.close(); }
+        sortie.pdf.push(f);
+        return f;
+      },
       'presse-papiers:ecrire-html': (_e, charge) => {
         try { return presse.ecrireHtml(clipboard, charge); } catch (e) { return { erreur: e.message }; }
       },
@@ -120,7 +148,177 @@ const commande = (id) => h.js(`window.commands.run(${JSON.stringify(id)})`);
   // Restauration du presse-papiers de l'utilisateur.
   if (avant.html) clipboard.write({ html: avant.html, text: avant.texte }); else clipboard.writeText(avant.texte);
 
-  // @@TACHE15@@
-  // @@TACHE16@@
+
+  // ─── Tâche 15a : export EPUB ───────────────────────────────────────────────
+  const bien = (xml, type) => h.js(`(() => { const d = new DOMParser().parseFromString(${JSON.stringify(xml)}, ${JSON.stringify(type)}); return d.getElementsByTagName('parsererror').length === 0; })()`);
+  const docEpub = `---\ntitle: Le Guide\nauthor: Ada Lovelace\nlang: en\n---\n\nIntroduction & préambule.\n\n# Premier chapitre\n\nTexte avec **gras** et un [lien](#second-chapitre).\n\n![logo](${img})\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n\`\`\`js\nif (a < b && c) { x(); }\n\`\`\`\n\n- [x] fait\n- [ ] à faire\n\n# Second chapitre\n\nSuite.<br>Ligne.\n\n\`\`\`mermaid\ngraph TD; A-->B;\n\`\`\`\n`;
+  await poserDoc(docEpub);
+  await pause(1500);
+  await commande('export:epub');
+  await pause(2000);
+  check('EPUB — la commande écrit un fichier .epub', sortie.epub.length === 1 && fs.existsSync(sortie.epub[0]) && fs.statSync(sortie.epub[0]).size > 500);
+  const archive = fs.readFileSync(sortie.epub[0]);
+  const zip = await JSZip.loadAsync(archive);
+  const noms = Object.keys(zip.files);
+  check('EPUB — « mimetype » est le premier fichier, non compressé (méthode 0), contenu juste après l’en-tête', noms[0] === 'mimetype' && archive.readUInt16LE(8) === 0 && archive.toString('latin1', 30, 38) === 'mimetype' && archive.toString('latin1', 38, 58) === 'application/epub+zip');
+  const lire = (n) => zip.file(n).async('string');
+  const chapitres = noms.filter((n) => /^OEBPS\/chapitre-\d+\.xhtml$/.test(n));
+  check('EPUB — un chapitre pour l’introduction et un par titre 1 (3 au total)', chapitres.length === 3, JSON.stringify(chapitres));
+  check('EPUB — META-INF/container.xml, content.opf, nav.xhtml, style.css présents', ['META-INF/container.xml', 'OEBPS/content.opf', 'OEBPS/nav.xhtml', 'OEBPS/style.css'].every((n) => !!zip.file(n)));
+  const opf = await lire('OEBPS/content.opf');
+  check('EPUB — métadonnées du front-matter : titre, auteur, langue', /<dc:title>Le Guide<\/dc:title>/.test(opf) && /<dc:creator>Ada Lovelace<\/dc:creator>/.test(opf) && /<dc:language>en<\/dc:language>/.test(opf), opf.slice(0, 600));
+  const nav = await lire('OEBPS/nav.xhtml');
+  check('EPUB — la table des matières liste les chapitres', /Premier chapitre/.test(nav) && /Second chapitre/.test(nav) && /chapitre-02\.xhtml/.test(nav));
+  const c2 = await lire('OEBPS/chapitre-02.xhtml');
+  const c3 = await lire('OEBPS/chapitre-03.xhtml');
+  check('EPUB — chaque chapitre commence par son titre 1 et contient son texte', /<h1[^>]*>Premier chapitre<\/h1>/.test(c2) && /<strong>gras<\/strong>/.test(c2) && /<h1[^>]*>Second chapitre<\/h1>/.test(c3));
+  check('EPUB — le lien interne vers l’autre chapitre est réécrit vers son fichier', /href="chapitre-03\.xhtml#second-chapitre"/.test(c2), c2.match(/href="[^"]*"/g)?.join(' '));
+  check('EPUB — balises auto-fermées et entités XHTML (<br/>, &lt;, &amp;)', /<br\/>/.test(c3) && /a &lt; b &amp;&amp; c/.test(c2) && !/<br>/.test(c3));
+  check('EPUB — cases à cocher converties en texte', /☑/.test(c2) && /☐/.test(c2) && !/<input/.test(c2));
+  const images = noms.filter((n) => n.startsWith('OEBPS/images/'));
+  check('EPUB — image du document et diagramme Mermaid rangés dans OEBPS/images', images.some((n) => n.endsWith('.png')) && images.some((n) => n.endsWith('.svg')), JSON.stringify(images));
+  const png = images.find((n) => n.endsWith('.png'));
+  check('EPUB — l’image PNG est intacte (signature) et déclarée dans le manifeste', png && (await zip.file(png).async('uint8array'))[1] === 0x50 && opf.includes('media-type="image/png"') && /<img[^>]*src="images\/image-\d+\.png"/.test(c2));
+  let xmlOk = true;
+  const detailXml = [];
+  for (const n of noms.filter((x) => /\.(xhtml|opf|xml)$/.test(x))) {
+    const ok = await bien(await lire(n), /\.xhtml$/.test(n) ? 'application/xhtml+xml' : 'application/xml');
+    if (!ok) { xmlOk = false; detailXml.push(n); }
+  }
+  check('EPUB — tous les .xhtml, .opf et .xml sont du XML bien formé (DOMParser)', xmlOk, detailXml.join(', '));
+  for (const n of images.filter((x) => x.endsWith('.svg'))) {
+    if (!(await bien(await lire(n), 'image/svg+xml'))) { xmlOk = false; detailXml.push(n); }
+  }
+  check('EPUB — le diagramme SVG est bien formé', xmlOk, detailXml.join(', '));
+  check('EPUB — IPC : octets qui ne sont pas une archive zip refusés par la garde de signature', Buffer.from([1, 2, 3, 4]).readUInt32LE(0) !== 0x04034b50);
+
+  // ─── Tâche 15b : diaporama ─────────────────────────────────────────────────
+  const docDia = '---\ntitle: Deck\n---\n\n# Slide un\n\nTexte **fort**\n\n---\n\n# Slide deux\n\n- a\n- b\n\n---\n\n```yaml\n---\nx: 1\n---\n```\n\n# Slide trois\n\n---\n\n# Slide quatre\n';
+  await poserDoc(docDia);
+  await pause(300);
+  const touche = (k) => h.js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(k)}, bubbles: true, cancelable: true })); true`);
+  const etat = () => h.jsonJs(`({ ouvert: window.mdr.diaporama.estOuvert(), i: window.mdr.diaporama.courant(), n: window.mdr.diaporama.total(), num: document.getElementById('diaporama-numero')?.textContent, visible: !!document.getElementById('diaporama') && !document.getElementById('diaporama').classList.contains('hidden'), titre: document.querySelector('#diaporama .diapo-slide')?.textContent.slice(0, 40) })`);
+  await commande('vue:diaporama');
+  await pause(300);
+  let e = await etat();
+  check('Diaporama — la commande ouvre la vue plein écran sur la slide 1 (4 slides, bloc de code et front-matter ignorés)', e.ouvert && e.visible && e.n === 4 && e.i === 0 && e.num === '1 / 4' && /Slide un/.test(e.titre), JSON.stringify(e));
+  check('Diaporama — le plein écran natif est demandé', sortie.plein[0] === true);
+  check('Diaporama — le Markdown de la slide est rendu (gras, titre)', await h.js(`!!document.querySelector('#diaporama .diapo-slide h1') && !!document.querySelector('#diaporama .diapo-slide strong')`));
+  const avantDoc = await h.js('window.mdr.editeur().getValue()');
+  await touche('ArrowRight'); e = await etat();
+  check('Diaporama — flèche droite : slide suivante, numéro mis à jour', e.i === 1 && e.num === '2 / 4' && /Slide deux/.test(e.titre) && (await h.js(`document.querySelectorAll('#diaporama .diapo-slide li').length`)) === 2);
+  await touche(' '); e = await etat();
+  check('Diaporama — espace : slide suivante', e.i === 2 && e.num === '3 / 4');
+  await touche('PageDown'); e = await etat();
+  check('Diaporama — PageDown : dernière slide', e.i === 3 && e.num === '4 / 4');
+  await touche('ArrowRight'); e = await etat();
+  check('Diaporama — au-delà de la dernière slide, on reste dessus', e.i === 3);
+  await touche('PageUp'); await touche('ArrowLeft'); e = await etat();
+  check('Diaporama — PageUp et flèche gauche : retour en arrière', e.i === 1);
+  await touche('End'); e = await etat();
+  const finDia = e.i;
+  await touche('Home'); e = await etat();
+  check('Diaporama — Fin et Début', finDia === 3 && e.i === 0);
+  check('Diaporama — le texte de l’éditeur n’a pas été touché par les touches', (await h.js('window.mdr.editeur().getValue()')) === avantDoc);
+  await touche('g');
+  check('Diaporama — « G » affiche les vignettes (une par slide)', await h.js(`!document.getElementById('diaporama-vignettes').classList.contains('hidden') && document.querySelectorAll('#diaporama-vignettes .diapo-vignette').length === 4`));
+  await h.js(`document.querySelectorAll('#diaporama-vignettes .diapo-vignette')[2].click(); true`);
+  e = await etat();
+  check('Diaporama — un clic sur une vignette saute à la slide et referme les vignettes', e.i === 2 && (await h.js(`document.getElementById('diaporama-vignettes').classList.contains('hidden')`)));
+  await touche('g'); await touche('Escape'); e = await etat();
+  check('Diaporama — Échap ferme d’abord les vignettes, sans quitter', e.ouvert && (await h.js(`document.getElementById('diaporama-vignettes').classList.contains('hidden')`)));
+  await touche('Escape'); await pause(200); e = await etat();
+  check('Diaporama — Échap quitte le diaporama et rend le plein écran', !e.ouvert && !e.visible && sortie.plein[sortie.plein.length - 1] === false);
+  check('Diaporama — fermé, les flèches ne le rouvrent pas', await (async () => { await touche('ArrowRight'); return !(await etat()).ouvert; })());
+  await poserDoc('\n---\n\n');
+  await commande('vue:diaporama');
+  await pause(200);
+  check('Diaporama — document sans contenu : message, rien ne s’ouvre', !(await etat()).ouvert);
+  await commande('vue:diaporama');
+
+  // ─── Tâche 15c : export PDF des slides ─────────────────────────────────────
+  await poserDoc(docDia);
+  await pause(300);
+  const prepa = JSON.parse(await h.js(`window.mdr.diaporama.construirePdf().then((d) => JSON.stringify({ nb: d.nombre, opts: d.options, sections: (d.html.match(/<section class="diapo-page">/g) || []).length, page: /@page \\{ size: 13\\.333in 7\\.5in; margin: 0; \\}/.test(d.html), saut: /break-after: page/.test(d.html) }))`));
+  check('Slides PDF — le HTML produit contient une section par slide, la page 16:9 et le saut de page', prepa.nb === 4 && prepa.sections === 4 && prepa.page && prepa.saut, JSON.stringify(prepa));
+  check('Slides PDF — pdfOptions : page 13,333 × 7,5 pouces, paysage, sans marge', pdfOptions(prepa.opts).pageSize.width === 13.333 && pdfOptions(prepa.opts).pageSize.height === 7.5 && pdfOptions(prepa.opts).margins.top === 0 && pdfOptions(prepa.opts).displayHeaderFooter === false);
+  await commande('export:diaporama-pdf');
+  await pause(4000);
+  check('Slides PDF — la commande écrit un PDF', sortie.pdf.length === 1 && fs.existsSync(sortie.pdf[0]));
+  const brut = fs.readFileSync(sortie.pdf[0]).toString('latin1');
+  const nbPages = (brut.match(/\/Type\s*\/Page\b/g) || []).length;
+  const mb = brut.match(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/);
+  check('Slides PDF — le vrai PDF compte une page par slide (4)', nbPages === 4, 'pages=' + nbPages);
+  check('Slides PDF — la page est en paysage 16:9 (960 × 540 pt)', mb && Math.abs(Number(mb[1]) - 960) < 1.5 && Math.abs(Number(mb[2]) - 540) < 1.5, mb ? mb[1] + 'x' + mb[2] : 'MediaBox absente');
+  check('Slides PDF — aucune page blanche en fin de document', (await h.js(`1`)) === 1 && nbPages === 4);
+
+
+  // ─── Tâche 16 : import .docx et HTML vers Markdown ─────────────────────────
+  const nbOnglets = () => h.js('window.mdr.onglets.liste().length');
+  const contenuActif = () => h.js('window.mdr.editeur().getValue()');
+  const docRound = `# Titre principal\n\n## Sous-titre\n\nUn paragraphe avec du **gras** et de l'*italique*.\n\n- pomme\n- poire\n\n1. premier\n2. second\n\n| Nom | Valeur |\n|-----|--------|\n| alpha | 1 |\n| beta | 2 |\n\n![logo](${img})\n`;
+  await poserDoc(docRound);
+  await pause(600);
+  const roundTrip = await h.js(`(async () => {
+    const octets = await window.mdr.exportDocx.construire();
+    return { taille: octets.length, md: await window.mdr.importer.versMarkdown('docx', octets) };
+  })()`);
+  const md = roundTrip.md;
+  check('Import Word — round-trip : le .docx exporté par l’application est relu', roundTrip.taille > 1000 && md.length > 50, md.slice(0, 200));
+  check('Import Word — round-trip : titres 1 et 2 conservés', /^# Titre principal$/m.test(md) && /^## Sous-titre$/m.test(md), md.slice(0, 300));
+  check('Import Word — round-trip : gras et italique conservés', /\*\*gras\*\*/.test(md) && /\*italique\*/.test(md));
+  check('Import Word — round-trip : liste à puces et liste numérotée', /^- pomme$/m.test(md) && /^- poire$/m.test(md) && /^1\. premier$/m.test(md) && /^2\. second$/m.test(md), md);
+  check('Import Word — round-trip : tableau avec en-têtes et lignes', /^\| Nom \| Valeur \|$/m.test(md) && /^\| ?-+ ?\| ?-+ ?\|$/m.test(md) && /^\| alpha \| 1 \|$/m.test(md) && /^\| beta \| 2 \|$/m.test(md), md);
+  check('Import Word — round-trip : image en data URI', /!\[[^\]]*\]\(data:image\/png;base64,/.test(md));
+
+  // Commande complète : dialogue stubé, onglet non enregistré.
+  const avantOnglets = await nbOnglets();
+  const octetsDocx = await h.js(`window.mdr.exportDocx.construire().then((o) => Array.from(o))`);
+  prochainImport = { nom: 'Rapport.docx', type: 'docx', octets: Uint8Array.from(octetsDocx) };
+  await commande('fichier:importer');
+  await pause(1500);
+  const apres = await h.jsonJs(`({ n: window.mdr.onglets.liste().length, actif: { path: window.mdr.onglets.actif().path, dirty: window.mdr.onglets.actif().dirty, titre: window.mdr.onglets.actif().titre } })`);
+  check('Import — le résultat s’ouvre dans un nouvel onglet non enregistré, marqué modifié, nommé d’après le fichier', apres.n === avantOnglets + 1 && apres.actif.path === null && apres.actif.dirty === true && apres.actif.titre === 'Rapport', JSON.stringify(apres));
+  check('Import — le nouvel onglet contient le Markdown converti', /^# Titre principal$/m.test(await contenuActif()));
+
+  // HTML aux balises hostiles, par la vraie lecture du fichier.
+  const fichierHtml = path.join(dossierTmp, 'hostile.html');
+  fs.writeFileSync(fichierHtml, '<html><head><title>T</title><script>window.__pwned = 1</script><style>h1{}</style></head><body onload="window.__pwned = 2"><h1 onclick="x()">Page importée</h1><p>Lien <a href="javascript:window.__pwned=3">piégé</a> et <a href="https://ok.fr">sûr</a>.</p><img src="x" onerror="window.__pwned=4"><iframe src="https://evil.example"></iframe><table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table></body></html>');
+  prochainImport = fichierHtml;
+  const avantHtml = await nbOnglets();
+  await commande('fichier:importer');
+  await pause(800);
+  const mdHtml = await contenuActif();
+  check('Import HTML — nouvel onglet avec titre, lien sûr et tableau convertis', (await nbOnglets()) === avantHtml + 1 && /^# Page importée$/m.test(mdHtml) && /\[sûr\]\(https:\/\/ok\.fr\)/.test(mdHtml) && /^\| A \| B \|$/m.test(mdHtml), mdHtml);
+  check('Import HTML — aucune balise hostile ni lien javascript dans le Markdown', !/script|onerror|onclick|onload|javascript|iframe|evil\.example|<style/i.test(mdHtml), mdHtml);
+  check('Import HTML — aucun script de la page importée ne s’est exécuté', (await h.js('window.__pwned === undefined')) === true);
+
+  // Cas invalides : jamais d'exception non gérée, aucun onglet ajouté.
+  const avantErr = await nbOnglets();
+  const cas = [
+    ['annulation du dialogue', null],
+    ['erreur renvoyée par le processus principal', { erreur: 'Fichier trop volumineux.' }],
+    ['.docx qui n’est pas une archive', { nom: 'faux.docx', type: 'docx', octets: new TextEncoder().encode('ceci n’est pas un docx') }],
+    ['.docx vide', { nom: 'vide.docx', type: 'docx', octets: new Uint8Array(0) }],
+    ['type inconnu', { nom: 'a.xyz', type: 'xyz', octets: new Uint8Array([1]) }],
+    ['HTML vide', { nom: 'vide.html', type: 'html', octets: new Uint8Array(0) }],
+    ['HTML sans texte', { nom: 'rien.html', type: 'html', octets: new TextEncoder().encode('<script>1</script><style>a{}</style>') }],
+  ];
+  const erreursPage = [];
+  await h.js(`window.addEventListener('error', (e) => { (window.__erreurs = window.__erreurs || []).push(e.message); }); window.addEventListener('unhandledrejection', (e) => { (window.__erreurs = window.__erreurs || []).push(String(e.reason)); }); true`);
+  for (const [nom, valeur] of cas) {
+    prochainImport = valeur;
+    await commande('fichier:importer');
+    await pause(500);
+    erreursPage.push(...(await h.jsonJs('window.__erreurs || []')));
+    check(`Import — ${nom} : aucun onglet ajouté`, (await nbOnglets()) === avantErr);
+  }
+  check('Import — aucune exception non gérée dans la page sur les cas invalides', erreursPage.length === 0, JSON.stringify(erreursPage));
+  const msg = await h.js(`document.getElementById('lot-notification').textContent`);
+  check('Import — un message d’erreur lisible est affiché pour un fichier invalide', /Import/.test(msg), msg);
+  const txt = path.join(dossierTmp, 'notes.txt');
+  fs.writeFileSync(txt, 'x');
+  check('Import — IPC : une extension non prise en charge est refusée avant lecture', /non pris en charge/.test((await lireFichierImport(txt)).erreur));
+  fs.rmSync(dossierTmp, { recursive: true, force: true });
   h.terminer();
 })().catch(h.erreurFatale);

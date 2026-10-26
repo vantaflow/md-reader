@@ -300,7 +300,7 @@ function enBloc(t) {
     case 'alert': return [N.alert.create({ type: t.name, syntax: t.syntax }, enfantsBlocs(t.tokens || []))];
     case 'list': {
       const items = t.items.map((it) => {
-        const contenu = (it.tokens || []).flatMap((c) => (c.type === 'text' ? [N.paragraph.create(null, enLigne(c.tokens || [c]))] : enBloc(c)));
+        const contenu = enBlocs((it.tokens || []).map((c) => (c.type === 'text' ? { type: 'paragraph', raw: c.raw, tokens: c.tokens || [c] } : c)));
         return N.list_item.create({ checked: it.task ? !!it.checked : null }, contenu.length ? contenu : [paragrapheVide()]);
       });
       const serre = !t.loose;

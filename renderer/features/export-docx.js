@@ -54,7 +54,16 @@
   }
 
   async function construire() {
-    return window.mdrDocx.creerDocx(rendreDetache(), { lireOctets, titre: nomDocument() });
+    const r = window.mdr.reglages;
+    const champEnTete = document.getElementById('pdf-header-text');
+    // Styles du document (front-matter) et mise en page : mêmes réglages que le PDF.
+    const page = {
+      format: r.get('pdfFormat'), paysage: r.get('pdfPaysage'),
+      margeHautMm: r.get('margeA4Haut'), margeBasMm: r.get('margeA4Bas'), margeCotesMm: r.get('margeA4Cotes'),
+      enTete: champEnTete ? champEnTete.value : '', pied: r.get('pdfPied'), numeros: r.get('pdfNumerosPage'),
+    };
+    const style = window.mdr.styleDoc ? window.mdr.styleDoc.pourWord() : null;
+    return window.mdrDocx.creerDocx(rendreDetache(), { lireOctets, titre: nomDocument(), style, page });
   }
 
   function annoncer(message) {

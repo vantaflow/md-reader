@@ -58,6 +58,14 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
     if (apresFamille.has(r.id) && i < entreesFormat.length - 1) formatFinal.push({ type: 'separator' });
   });
 
+  // Mode Document : mise en forme supplémentaire (souligné, diagramme visuel, styles du document).
+  formatFinal.push(
+    { type: 'separator' },
+    { label: 'Souligné', accelerator: acc('format:souligne'), click: commande('format:souligne') },
+    { label: 'Diagramme visuel…', click: commande('diagramme:nouveau') },
+    { label: 'Styles du document…', click: commande('style:document') },
+  );
+
   return [
     ...(isMac ? [{
       label: nomApp,
@@ -144,6 +152,11 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         { label: 'Éditeur seul', click: commande('vue:editeur-seul') },
         { label: 'Aperçu seul', click: commande('vue:apercu-seul') },
         { label: 'Éditeur et aperçu', click: commande('vue:deux') },
+        { type: 'separator' },
+        { label: 'Mode Document (page mise en forme)', click: commande('vue:mode-document') },
+        { label: 'Mode code (Markdown)', click: commande('vue:mode-code') },
+        { label: 'Basculer mode code / mode Document', accelerator: acc('vue:mode-edition'), click: commande('vue:mode-edition') },
+        { type: 'separator' },
         { label: 'Afficher/masquer le volet code', accelerator: acc('vue:code'), click: canal('menu:toggle-editor') },
         { label: 'Barre d’outils de mise en forme', click: commande('vue:barre-outils') },
         { label: 'Mode focus', click: commande('vue:focus') },

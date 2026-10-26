@@ -13,7 +13,10 @@ function pdfOptions(options = {}) {
     margins: { top: m, bottom: m, left: m, right: m },
     displayHeaderFooter: !!options.headerFooter,
     headerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#666;">' + (options.headerText || '') + '</div>',
-    footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#666;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+    // Pied de page : texte libre facultatif, puis numéros de page (sauf `pageNumbers: false`).
+    footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#666;">'
+      + (options.footerText ? String(options.footerText).replace(/&/g, '&amp;').replace(/</g, '&lt;') + (options.pageNumbers === false ? '' : ' — ') : '')
+      + (options.pageNumbers === false ? '' : '<span class="pageNumber"></span> / <span class="totalPages"></span>') + '</div>',
     generateDocumentOutline: true,
     generateTaggedPDF: true,
   };

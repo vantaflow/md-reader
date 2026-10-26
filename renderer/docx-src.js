@@ -9,7 +9,31 @@
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, ImageRun,
   ExternalHyperlink, PageBreak, AlignmentType, ShadingType, BorderStyle, LevelFormat, UnderlineType,
+  Header, Footer, PageNumber, PageOrientation,
 } from 'docx';
+
+// Tailles de papier en twips (largeur, hauteur en portrait).
+const PAPIERS = { A4: [11906, 16838], Letter: [12240, 15840], Legal: [12240, 20160], A3: [16838, 23811], A5: [8391, 11906] };
+
+// « #rrggbb » ou « rgb(r, g, b) » -> « RRGGBB » (null si non reconnu).
+function couleurHex(c) {
+  if (!c) return null;
+  const h = /^#([0-9a-f]{6})$/i.exec(c.trim());
+  if (h) return h[1].toUpperCase();
+  const c3 = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(c.trim());
+  if (c3) return (c3[1] + c3[1] + c3[2] + c3[2] + c3[3] + c3[3]).toUpperCase();
+  const r = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(c.trim());
+  return r ? [r[1], r[2], r[3]].map((x) => Number(x).toString(16).padStart(2, '0')).join('').toUpperCase() : null;
+}
+
+// Taille CSS (pt, px, em) -> demi-points Word (null si non reconnue).
+function demiPoints(t) {
+  const m = /^(\d+(?:\.\d+)?)(pt|px|em)$/i.exec((t || '').trim());
+  if (!m) return null;
+  const n = Number(m[1]);
+  const pt = m[2] === 'pt' ? n : m[2] === 'px' ? n * 0.75 : n * 11;
+  return Math.round(pt * 2);
+}
 
 // Page A4, marges de 2 cm : largeur utile en twips (1/20 de point) puis en pixels (96 dpi).
 const LARGEUR_PAGE_TWIPS = 11906;
@@ -103,7 +127,7 @@ function estBloc(n) {
   return false;
 }
 
-export async function creerDocx(racine, { lireOctets, titre = 'Document' } = {}) {
+export async function creerDocx(racine, { lireOctets, titre = 'Document', style = null, page = null } = {}) {
   const reglagesNumerotation = new Map(); // référence -> config
   let compteurListes = 0;
 
@@ -177,7 +201,11 @@ export async function creerDocx(racine, { lireOctets, titre = 'Document' } = {})
     if (fmt.lien) o.color = '0563C1';
     if (fmt.exposant) o.superScript = true;
     if (fmt.indice) o.subScript = true;
-    if (fmt.surligne) o.highlight = 'yellow';
+    if (fmt.surligne === true) o.highlight = 'yellow';
+    else if (fmt.surligne) o.shading = { type: ShadingType.CLEAR, fill: fmt.surligne, color: 'auto' };
+    if (fmt.couleur && !fmt.lien) o.color = fmt.couleur;
+    if (fmt.police) o.font = fmt.police;
+    if (fmt.taille) o.size = fmt.taille;
     if (fmt.code) { o.font = POLICE_CODE; o.size = 20; o.shading = { type: ShadingType.CLEAR, fill: FOND_CODE, color: 'auto' }; }
     return o;
   }
@@ -209,7 +237,17 @@ export async function creerDocx(racine, { lireOctets, titre = 'Document' } = {})
     else if (tag === 'U' || tag === 'INS') f.souligne = true;
     else if (tag === 'SUP') f.exposant = true;
     else if (tag === 'SUB') f.indice = true;
-    else if (tag === 'MARK') f.surligne = true;
+    else if (tag === 'MARK') f.surligne = couleurHex(n.style && (n.style.backgroundColor || n.style.background)) || true;
+    else if (tag === 'SPAN' && n.style) {
+      const c = couleurHex(n.style.color);
+      if (c) f.couleur = c;
+      const fond = couleurHex(n.style.backgroundColor || n.style.background);
+      if (fond) f.surligne = fond;
+      const police = (n.style.fontFamily || '').split(',')[0].replace(/["']/g, '').trim();
+      if (police) f.police = police;
+      const taille = demiPoints(n.style.fontSize);
+      if (taille) f.taille = taille;
+    }
     if (tag === 'A') {
       const href = n.getAttribute('href') || '';
       const externe = /^(https?:|mailto:|tel:|file:)/i.test(href);
@@ -384,11 +422,38 @@ export async function creerDocx(racine, { lireOctets, titre = 'Document' } = {})
   const enfants = await blocs(racine, { retrait: 0 });
   if (!enfants.length) enfants.push(new Paragraph({ children: [] }));
 
+  // Styles du document (front-matter) : police, taille, couleurs du texte et des titres.
+  const runDefaut = { font: (style && style.police) || 'Calibri', size: style && style.taillePt ? Math.round(style.taillePt * 2) : 22 };
+  if (style && style.couleurTexte) runDefaut.color = style.couleurTexte;
+  const stylesTitres = {};
+  if (style && (style.couleurTitres || style.police)) {
+    for (const k of ['heading1', 'heading2', 'heading3', 'heading4', 'heading5', 'heading6']) {
+      stylesTitres[k] = { run: { ...(style.couleurTitres ? { color: style.couleurTitres } : {}), ...(style.police ? { font: style.police } : {}) } };
+    }
+  }
+  // Mise en page : mêmes réglages que l'export PDF (format, orientation, marges, en-tête, pied).
+  const dim = PAPIERS[page && page.format] || PAPIERS.A4;
+  const paysage = !!(page && page.paysage);
+  const mm = (v, defaut) => (Number.isFinite(v) ? Math.round(v * 56.69) : defaut);
+  const marges = {
+    top: mm(page && page.margeHautMm, MARGE_TWIPS), bottom: mm(page && page.margeBasMm, MARGE_TWIPS),
+    left: mm(page && page.margeCotesMm, MARGE_TWIPS), right: mm(page && page.margeCotesMm, MARGE_TWIPS),
+  };
+  const petit = { size: 16, color: '666666' };
+  const enTetes = {};
+  if (page && page.enTete) enTetes.headers = { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: page.enTete, ...petit })] })] }) };
+  if (page && (page.pied || page.numeros)) {
+    const runs = [];
+    if (page.pied) runs.push(new TextRun({ text: page.pied + (page.numeros ? ' — ' : ''), ...petit }));
+    if (page.numeros) runs.push(new TextRun({ children: [PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES], ...petit }));
+    enTetes.footers = { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: runs })] }) };
+  }
+
   const doc = new Document({
     title: titre,
     creator: 'MD Reader',
     styles: {
-      default: { document: { run: { font: 'Calibri', size: 22 } } },
+      default: { document: { run: runDefaut }, ...stylesTitres },
       paragraphStyles: [{ id: 'BlocCode', name: 'Bloc de code', basedOn: 'Normal', run: { font: POLICE_CODE, size: 20 }, paragraph: { spacing: { after: 0 } } }],
     },
     numbering: {
@@ -404,7 +469,8 @@ export async function creerDocx(racine, { lireOctets, titre = 'Document' } = {})
       ],
     },
     sections: [{
-      properties: { page: { size: { width: LARGEUR_PAGE_TWIPS, height: 16838 }, margin: { top: MARGE_TWIPS, bottom: MARGE_TWIPS, left: MARGE_TWIPS, right: MARGE_TWIPS } } },
+      properties: { page: { size: { width: dim[0], height: dim[1], orientation: paysage ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT }, margin: marges } },
+      ...enTetes,
       children: enfants,
     }],
   });

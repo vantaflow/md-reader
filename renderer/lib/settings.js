@@ -22,6 +22,8 @@
     numerosLigne: true,
     tabulation: 2,
     barreOutils: true,
+    // Mode d'édition : « code » (Markdown) ou « document » (page mise en forme)
+    modeEdition: 'code',
     // Aperçu (marges des feuilles A4 en millimètres)
     modeDefaut: 'a4',
     policeApercu: '',
@@ -37,6 +39,8 @@
     pdfNumerosPage: true,
     pdfPageGarde: false,
     pdfFiligrane: '',
+    // Pied de page des exports (texte libre ; l'en-tête reste dans la modale d'export)
+    pdfPied: '',
     // Thème des exports PDF / HTML (sobre, rapport, académique) et CSS personnalisé
     exportTheme: 'sobre',
     exportCssPerso: '',
@@ -59,6 +63,7 @@
 
   // Valeurs permises pour les réglages à choix fermé.
   const CHOIX = {
+    modeEdition: ['code', 'document'],
     modeDefaut: ['continu', 'a4', 'a4-double'],
     theme: ['clair', 'sombre', 'systeme'],
     pdfFormat: ['A4', 'Letter', 'Legal', 'A3', 'A5'],

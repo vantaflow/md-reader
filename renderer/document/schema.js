@@ -175,7 +175,7 @@ const nodes = {
     defining: true,
     attrs: { type: { default: 'note' }, syntax: { default: 'gfm' } },
     parseDOM: [{ tag: 'div.markdown-alert', getAttrs: (dom) => ({ type: TYPES_ENCADRES.find((t) => dom.classList.contains('markdown-alert-' + t)) || 'note' }), contentElement: (dom) => dom }],
-    toDOM(n) { return ['div', { class: `markdown-alert markdown-alert-${n.attrs.type}`, 'data-alert': n.attrs.type }, 0]; },
+    toDOM(n) { return ['div', { class: `markdown-alert markdown-alert-${n.attrs.type}`, 'data-alert': n.attrs.type, 'data-titre': LIBELLES_ENCADRES[n.attrs.type] || '' }, 0]; },
   },
 
   // Formule en bloc : `$$ … $$`.

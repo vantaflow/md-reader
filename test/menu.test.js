@@ -31,6 +31,8 @@ test('Format : toutes les actions avec les raccourcis de la spec', () => {
     Lien: 'CmdOrCtrl+K', Image: 'CmdOrCtrl+Shift+I', Tableau: 'CmdOrCtrl+Alt+T', 'Bloc de code': 'CmdOrCtrl+Alt+C',
     Citation: 'CmdOrCtrl+Shift+.', 'Saut de page': 'CmdOrCtrl+Enter',
     'Éditeur de tableau…': 'CmdOrCtrl+Alt+Shift+T', 'Reformater le document': 'CmdOrCtrl+Alt+Shift+F', 'Reformater la sélection': 'CmdOrCtrl+Alt+Shift+R',
+    // Mode Document : souligné, diagramme visuel, styles du document.
+    Souligné: 'CmdOrCtrl+U', 'Diagramme visuel…': undefined, 'Styles du document…': undefined,
   };
   assert.deepStrictEqual(Object.fromEntries(format.map((i) => [i.label, i.accelerator])), attendu);
 });

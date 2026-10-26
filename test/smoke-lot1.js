@@ -305,12 +305,12 @@ const pause = (ms) => h.attendre(ms);
       commandes: window.commands.all().map((c) => c.id).filter((i) => i.startsWith('format:')),
     };
   })()`);
-  check('Barre — 15 boutons, un par action Format', barre.ids.length === 15 && new Set(barre.ids).size === 15, JSON.stringify(barre.ids));
+  check('Barre — 16 boutons : un par action Format, plus le diagramme visuel', barre.ids.length === 16 && new Set(barre.ids).size === 16 && barre.ids.includes('diagramme:nouveau'), JSON.stringify(barre.ids));
   check('Barre — placée au-dessus de l’éditeur et visible', barre.auDessus && barre.visible, JSON.stringify(barre));
   check('Barre — infobulles françaises avec raccourci', barre.titres.every((t) => /\(.+\)$/.test(t)) && barre.titres[0].startsWith('Gras (') && barre.aria, JSON.stringify(barre.titres));
   check('Barre — l’infobulle du gras annonce le raccourci de la plateforme',
     barre.titres[0] === 'Gras (' + raccourcisTable.afficher('CmdOrCtrl+B', process.platform) + ')', barre.titres[0]);
-  check('Palette — les 16 commandes format:* sont enregistrées', barre.commandes.length === 16 && barre.ids.every((i) => barre.commandes.includes(i)), JSON.stringify(barre.commandes));
+  check('Palette — les 16 commandes format:* (dont souligné) sont enregistrées', barre.commandes.length === 16 && barre.ids.filter((i) => i.startsWith('format:')).every((i) => barre.commandes.includes(i)), JSON.stringify(barre.commandes));
 
   // Chaque bouton agit sur l'éditeur, puis bascule au second clic.
   const casFormat = [

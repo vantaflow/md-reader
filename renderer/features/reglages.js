@@ -18,6 +18,7 @@
         { cle: 'numerosLigne', libelle: 'Numéros de ligne', type: 'case' },
         { cle: 'tabulation', libelle: 'Taille de tabulation (espaces)', type: 'nombre', min: 1, max: 16, pas: 1 },
         { cle: 'barreOutils', libelle: 'Barre d’outils visible', type: 'case' },
+        { cle: 'modeEdition', libelle: 'Mode d’édition par défaut', type: 'liste', options: [['code', 'Code (Markdown)'], ['document', 'Document (page mise en forme)']] },
       ],
     },
     {
@@ -39,6 +40,7 @@
         { cle: 'pdfNumerosPage', libelle: 'Numéros de page', type: 'case' },
         { cle: 'pdfPageGarde', libelle: 'Page de garde (depuis le front-matter)', type: 'case' },
         { cle: 'pdfFiligrane', libelle: 'Filigrane', type: 'texte' },
+        { cle: 'pdfPied', libelle: 'Pied de page (texte)', type: 'texte' },
         { cle: 'exportTheme', libelle: 'Thème d’export PDF et HTML', type: 'liste', options: [['sobre', 'Sobre'], ['rapport', 'Rapport'], ['academique', 'Académique']] },
         { cle: 'exportCssPerso', libelle: 'CSS personnalisé (ajouté après le thème, 20 000 caractères au plus)', type: 'zone' },
       ],

@@ -16,3 +16,4 @@ build/icon.iconset/
 .autopilot/
 .worktrees/
 renderer/docx-bundle.js
+renderer/document-bundle.js

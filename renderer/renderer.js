@@ -240,6 +240,7 @@ function render() {
   const src = editor ? editor.getValue() : '';
   const { meta, body } = stripFrontMatter(src);
   frontMatter = meta;
+  if (window.mdr.styleDoc) window.mdr.styleDoc.appliquer();
   preview.classList.remove('pagine');
   preview.innerHTML = md.parse(body);
   const { headings } = md.enhance(preview);
@@ -866,7 +867,9 @@ function readPdfOptions() {
     pageSize: document.getElementById('pdf-page-size').value,
     landscape: document.getElementById('pdf-landscape').value === 'true',
     margin: parseFloat(document.getElementById('pdf-margin').value) || 0.5,
-    headerFooter: document.getElementById('pdf-header-footer').checked,
+    headerFooter: document.getElementById('pdf-header-footer').checked || !!document.getElementById('pdf-header-text').value || !!reglages.get('pdfPied'),
+    pageNumbers: document.getElementById('pdf-header-footer').checked,
+    footerText: reglages.get('pdfPied'),
     headerText: document.getElementById('pdf-header-text').value,
     breakBeforeH1: document.getElementById('pdf-break-h1').checked,
     numberHeadings: document.getElementById('pdf-number-headings').checked,
@@ -895,7 +898,9 @@ document.getElementById('pdf-theme').value = reglages.get('exportTheme');
 // Feuille de style des exports : thème choisi puis CSS personnalisé du réglage.
 // Jamais ajoutée à l'aperçu ni à styles.css.
 function cssThemeExport(options = {}) {
-  return window.mdrThemesExport.cssExport({ theme: options.theme || reglages.get('exportTheme'), cssPerso: reglages.get('exportCssPerso') });
+  // Styles du document (front-matter : police, taille, couleurs) ajoutés après le thème.
+  const styleDoc = window.mdr.styleDoc ? window.mdr.styleDoc.cssExport() : '';
+  return window.mdrThemesExport.cssExport({ theme: options.theme || reglages.get('exportTheme'), cssPerso: reglages.get('exportCssPerso') }) + '\n' + styleDoc;
 }
 function showPdfModal() { appliquerDefautsPdf(); pdfModal.classList.remove('hidden'); }
 function hidePdfModal() { pdfModal.classList.add('hidden'); }
@@ -1312,6 +1317,9 @@ Object.assign(window.mdr = window.mdr || {}, {
     recharger: rechargerOnglet,
   },
 });
+
+// Mode Document (features/document.js) : enveloppes de l'éditeur et mode d'édition par défaut.
+if (window.mdr.document) window.mdr.document.initialiser();
 
 document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {

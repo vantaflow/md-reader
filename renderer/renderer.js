@@ -540,8 +540,15 @@ function nouvelleFeuille(conteneur) {
   return contenu;
 }
 
+// Une marge de quelques pixels : l'aperçu est ensuite mis à l'échelle (zoom),
+// et les arrondis du zoom peuvent faire dépasser d'un pixel une feuille
+// remplie au ras.
 function deborde(contenu) {
-  return contenu.scrollHeight > contenu.clientHeight + 1;
+  if (contenu.scrollHeight > contenu.clientHeight + 1) return true;
+  const dernier = contenu.lastElementChild;
+  if (!dernier) return false;
+  const bas = contenu.getBoundingClientRect().top + contenu.clientHeight;
+  return dernier.getBoundingClientRect().bottom > bas - 3;
 }
 
 function paginer() {
@@ -632,7 +639,9 @@ function planifierPagination() {
   clearTimeout(minuterieA4);
   // Mermaid peint ses schémas de façon asynchrone : on attend qu'il ait fini
   // pour mesurer les hauteurs réelles.
-  minuterieA4 = setTimeout(() => { mermaidPending.catch(() => {}).then(paginer); }, 150);
+  minuterieA4 = setTimeout(() => {
+    Promise.all([mermaidPending.catch(() => {}), document.fonts ? document.fonts.ready : null]).then(paginer);
+  }, 150);
 }
 
 function choisirModeAffichage(mode) {

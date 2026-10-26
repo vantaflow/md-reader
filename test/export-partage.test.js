@@ -118,3 +118,9 @@ test('presse-papiers : écrit le HTML et le texte, refuse le reste', () => {
   assert.throws(() => presse.ecrireHtml(faux, { html: 'x'.repeat(presse.MAX_HTML + 1), text: 'a' }), /volumineux/);
   assert.equal(appels.length, 1);
 });
+
+test('CSS perso : @import retiré (aucun chargement réseau depuis un export)', () => {
+  const s = themes.nettoyerCssPerso('@import url(https://exemple.test/x.css);\n@IMPORT "y.css";\nbody{color:red}');
+  assert.doesNotMatch(s, /@import/i);
+  assert.match(s, /body\{color:red\}/);
+});

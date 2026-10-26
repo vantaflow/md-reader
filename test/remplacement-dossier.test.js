@@ -106,3 +106,15 @@ test('appliquerRemplacement : paramètres invalides', async () => {
   assert.deepEqual(vide, { modifies: [], sautes: [] });
   await assert.rejects(donnees.appliquerRemplacement('relatif', { recherche: 'a' }, []));
 });
+
+test('apercuRemplacement et appliquerRemplacement : expression catastrophique refusée avec une erreur', async () => {
+  ecrire('lent.md', 'a'.repeat(40) + 'b\n');
+  const parametres = { recherche: '(a+)+$', remplacement: 'x', regex: true };
+  const t0 = Date.now();
+  const r = await donnees.apercuRemplacement(racine, parametres);
+  assert.ok(Date.now() - t0 < 15000);
+  assert.match(r.erreur, /trop de temps/i);
+  const a = await donnees.appliquerRemplacement(racine, parametres, [{ rel: 'lent.md', empreinte: 'x', indices: [0] }]);
+  assert.ok(a.erreur || a.modifies.length === 0);
+  assert.equal(lire('lent.md'), 'a'.repeat(40) + 'b\n');
+});

@@ -97,7 +97,8 @@
       precedent = s;
       s = s.replace(/<\s*\/?\s*style[^>]*>?/gi, '').replace(/<!--|-->/g, '').replace(/<\s*\/?\s*script[^>]*>?/gi, '');
     } while (s !== precedent);
-    return s.replace(/</g, '').trim();
+    // `@import` chargerait une feuille externe depuis le document exporté.
+    return s.replace(/@import\b[^;{}]*;?/gi, '').replace(/</g, '').trim();
   }
 
   function cssTheme(id) { return CSS[themeOuDefaut(id)]; }

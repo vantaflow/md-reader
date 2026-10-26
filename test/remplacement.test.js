@@ -108,3 +108,21 @@ test('remplacement : empreinte stable et sensible au contenu', () => {
   assert.equal(r.empreinte('abc'), r.empreinte('abc'));
   assert.notEqual(r.empreinte('abc'), r.empreinte('abd'));
 });
+
+test('remplacement : une expression catastrophique est interrompue (délai), sans geler', () => {
+  const params = { recherche: '(a+)+$', remplacement: 'x', regex: true };
+  const c = r.construireRegex(params);
+  assert.ok(c.re);
+  const t0 = Date.now();
+  const res = r.trouverOccurrences('a'.repeat(40) + 'b', c.re, params, 500, 300);
+  assert.ok(Date.now() - t0 < 3000, 'doit être interrompue rapidement');
+  assert.equal(res.delaiDepasse, true);
+  assert.deepEqual(res.occurrences, []);
+});
+
+test('remplacement : une expression ordinaire ne dépasse pas le délai', () => {
+  const params = { recherche: 'chat', remplacement: 'chien' };
+  const res = occ('chat chat', params);
+  assert.equal(res.delaiDepasse, undefined);
+  assert.equal(res.occurrences.length, 2);
+});

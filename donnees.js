@@ -8,6 +8,7 @@ const wiki = require('./renderer/lib/wiki.js');
 const tagsLib = require('./renderer/lib/tags.js');
 const remplacement = require('./remplacement.js');
 
+const ERREUR_LENTE = 'Cette expression régulière prend trop de temps à s’exécuter (retour arrière excessif). Simplifiez-la, par exemple en évitant les quantificateurs imbriqués comme (a+)+.';
 const FICHIER_SNIPPETS = 'snippets.json';
 const EXT_MD = /\.(md|markdown|mdown|mkd)$/i;
 const PROFONDEUR_MAX = 4;
@@ -160,6 +161,7 @@ async function apercuRemplacement(dossier, parametres) {
     if (contenu === null) { ignores.push(f.rel); continue; }
     const max = Math.min(L.occurrencesParFichier, L.occurrencesTotal - total);
     const r = remplacement.trouverOccurrences(contenu, re, parametres, max);
+    if (r.delaiDepasse) return { erreur: ERREUR_LENTE };
     if (!r.occurrences.length) continue;
     total += r.occurrences.length;
     if (r.tronque) tronque = true;
@@ -229,7 +231,8 @@ async function appliquerRemplacement(dossier, parametres, selection) {
     const contenu = await lireBorne(abs);
     if (contenu === null) { sautes.push({ rel, raison: 'fichier illisible ou trop gros' }); continue; }
     if (remplacement.empreinte(contenu) !== choix.empreinte) { sautes.push({ rel, raison: 'modifié depuis l’aperçu' }); continue; }
-    const { occurrences } = remplacement.trouverOccurrences(contenu, re, parametres, L.occurrencesParFichier);
+    const { occurrences, delaiDepasse } = remplacement.trouverOccurrences(contenu, re, parametres, L.occurrencesParFichier);
+    if (delaiDepasse) { sautes.push({ rel, raison: 'expression trop lente' }); continue; }
     const res = remplacement.appliquer(contenu, occurrences, indices);
     if (!res.remplacees) continue;
     try { await ecrireAtomique(abs, res.contenu); }

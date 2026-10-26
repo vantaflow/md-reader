@@ -3,6 +3,7 @@
 // sans Electron. Les expressions invalides ne lèvent jamais d'exception vers
 // l'appelant : elles produisent un objet { erreur }.
 const crypto = require('crypto');
+const vm = require('vm');
 
 const LIMITES = {
   rechercheMax: 500,
@@ -12,6 +13,7 @@ const LIMITES = {
   tailleFichierMax: 2 * 1024 * 1024,
   fichiersMax: 500,
   contexteMax: 300,
+  delaiMs: 1500, // temps maximal d'une recherche dans un document (expressions catastrophiques)
 };
 
 const MOT_U = '[\\p{L}\\p{N}_]';
@@ -80,16 +82,37 @@ function tronquer(texte) {
 // apres }] ; `avant` / `apres` sont les lignes complètes concernées, avant et
 // après remplacement. { occurrences, tronque } ; `tronque` vaut vrai si la
 // borne `max` a été atteinte.
-function trouverOccurrences(contenu, re, parametres, max = LIMITES.occurrencesParFichier) {
+function trouverOccurrences(contenu, re, parametres, max = LIMITES.occurrencesParFichier, delaiMs = LIMITES.delaiMs) {
   const p = normaliserParametres(parametres);
   const texte = String(contenu);
   const occurrences = [];
   let tronque = false;
+  // La recherche s'exécute dans un contexte `vm` avec un délai : une expression
+  // à retour arrière catastrophique (`(a+)+$`) est interrompue au lieu de geler
+  // le processus principal.
+  let trouvees;
+  try {
+    const contexte = vm.createContext({ re, texte, max, sortie: [] });
+    re.lastIndex = 0;
+    vm.runInContext(
+      `let m; while ((m = re.exec(texte))) {
+        if (m[0] === '') { re.lastIndex += 1; continue; }
+        if (sortie.length > max) break;
+        sortie.push({ index: m.index, groupes: Array.from(m), nommes: m.groups ? Object.assign({}, m.groups) : undefined });
+      }`,
+      contexte,
+      { timeout: Math.max(1, delaiMs) },
+    );
+    trouvees = Array.from(contexte.sortie);
+    if (trouvees.length > max) { tronque = true; trouvees = trouvees.slice(0, max); }
+  } catch (e) {
+    re.lastIndex = 0;
+    if (e && e.code === 'ERR_SCRIPT_EXECUTION_TIMEOUT') return { occurrences: [], tronque: false, delaiDepasse: true };
+    throw e;
+  }
   re.lastIndex = 0;
-  let m;
-  while ((m = re.exec(texte))) {
-    if (m[0] === '') { re.lastIndex += 1; continue; }
-    if (occurrences.length >= max) { tronque = true; break; }
+  for (const t of trouvees) {
+    const m = Object.assign(Array.from(t.groupes), { index: t.index, groups: t.nommes });
     const debut = m.index;
     const fin = debut + m[0].length;
     const remplace = expandre(p.remplacement, m, p.regex);

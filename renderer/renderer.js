@@ -322,6 +322,7 @@ async function saveFile({ sous = false } = {}) {
     markClean();
     fileNameEl.textContent = saved.split(/[\\/]/).pop();
     window.api.watchFile(saved);
+    if (window.mdr.historique) window.mdr.historique.instantane(saved, activeTab.content);
     if (folderRoot) refreshTree();
   }
 }

@@ -10,6 +10,7 @@ const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
 const presse = require('./presse-papiers.js');
 const { lireFichierImport } = require('./importation.js');
+const historique = require('./historique.js');
 const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
@@ -650,6 +651,25 @@ ipcMain.handle('correcteur:langues', (_e, choix) => appliquerLanguesCorrecteur(t
 
 // Snippets : un fichier JSON dans le dossier de données de l'application, jamais
 // ailleurs ; la liste est assainie et bornée à chaque lecture et écriture.
+// Historique des versions : chemin markdown absolu, contenu texte borné et
+// identifiant de version au format strict sont revérifiés par historique.js ;
+// l'écriture ne sort jamais de <données>/historique/<hash>/.
+const borne = (v) => (v && typeof v === 'object' ? v : {});
+ipcMain.handle('historique:ajouter', async (_e, c) => {
+  const { chemin, contenu } = borne(c);
+  try { return await historique.ajouter(app.getPath('userData'), chemin, contenu); }
+  catch (e) { return { ajoute: false, erreur: e.message }; }
+});
+ipcMain.handle('historique:lister', async (_e, chemin) => {
+  try { return { versions: await historique.lister(app.getPath('userData'), chemin) }; }
+  catch (e) { return { versions: [], erreur: e.message }; }
+});
+ipcMain.handle('historique:lire', async (_e, c) => {
+  const { chemin, id } = borne(c);
+  try { return { contenu: await historique.lire(app.getPath('userData'), chemin, id) }; }
+  catch (e) { return { erreur: e.message }; }
+});
+
 ipcMain.handle('snippets:lire', () => lireSnippets(app.getPath('userData')));
 ipcMain.handle('snippets:ecrire', (_e, liste) => ecrireSnippets(app.getPath('userData'), liste));
 

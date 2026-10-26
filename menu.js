@@ -87,6 +87,7 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
         depuisTable('fichier:enregistrer', canal('menu:save')),
         depuisTable('fichier:enregistrer-sous'),
         { label: 'Dupliquer', click: commande('fichier:dupliquer') },
+        { label: 'Historique des versions…', click: commande('fichier:historique') },
         depuisTable('fichier:fermer', canal('menu:close-tab')),
         { type: 'separator' },
         depuisTable('export:pdf', canal('menu:export')),

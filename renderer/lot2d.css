@@ -1,0 +1,25 @@
+/* Lot 2d (1.9.0, confort) : historique, présentation lecture, statistiques,
+   mises à jour. Feuille séparée pour ne pas toucher à styles.css. */
+
+/* ---------- Historique des versions ---------- */
+.modal-content.historique { width: min(900px, 94vw); max-height: 88vh; display: flex; flex-direction: column; }
+.historique .modale-corps { min-height: 0; flex: 1; display: flex; }
+.histo-colonnes { display: flex; gap: 12px; width: 100%; min-height: 50vh; max-height: 62vh; }
+.histo-liste { list-style: none; margin: 0; padding: 0; width: 220px; flex: none; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+.histo-item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--fg); padding: 6px 10px; cursor: pointer; }
+.histo-item.actif { background: var(--accent); color: var(--accent-fg); }
+.histo-taille { font-size: 11px; opacity: 0.7; }
+.histo-droite { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.histo-modes { display: flex; gap: 6px; margin-bottom: 8px; }
+.histo-modes button { padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-alt); color: var(--fg); cursor: pointer; }
+.histo-modes button.actif { border-color: var(--accent); font-weight: 600; }
+.histo-zone { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; }
+.histo-texte { margin: 0; white-space: pre-wrap; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+.histo-resume { margin-bottom: 8px; color: var(--fg-muted); font-size: 12px; }
+.histo-diff { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+.diff-ligne { display: flex; white-space: pre-wrap; }
+.diff-signe { width: 18px; flex: none; text-align: center; user-select: none; }
+.diff-ajout { background: rgba(34, 197, 94, 0.18); }
+.diff-suppr { background: rgba(239, 68, 68, 0.18); text-decoration: line-through; text-decoration-color: rgba(239, 68, 68, 0.5); }
+.diff-ajout .diff-signe { color: #16a34a; }
+.diff-suppr .diff-signe { color: #dc2626; }

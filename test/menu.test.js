@@ -167,3 +167,12 @@ test('Fichier et Affichage : EPUB, slides en PDF, diaporama (F5) envoient leur c
   epub.click(); slides.click(); diapo.click();
   assert.deepStrictEqual(envoyes, [['menu:commande', 'export:epub'], ['menu:commande', 'export:diaporama-pdf'], ['menu:commande', 'vue:diaporama']]);
 });
+
+test('Fichier : « Historique des versions… » envoie la commande fichier:historique', () => {
+  envoyes.length = 0;
+  const fichier = menu(base('win32'), 'Fichier').submenu;
+  const e = fichier.find((i) => i.label === 'Historique des versions…');
+  assert.ok(e, 'entrée absente');
+  e.click();
+  assert.deepStrictEqual(envoyes, [['menu:commande', 'fichier:historique']]);
+});

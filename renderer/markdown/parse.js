@@ -18,6 +18,7 @@ import { createDirectives } from 'marked-directive';
 import { LABELS } from './labels.js';
 import { ICONS } from './icons.js';
 import hljs from 'highlight.js/lib/common';
+import emoji from '../lib/emoji.js';
 
 import dockerfile from 'highlight.js/lib/languages/dockerfile';
 import powershell from 'highlight.js/lib/languages/powershell';
@@ -93,6 +94,22 @@ export function createParser() {
   }));
 
   marked.use(createDirectives([directiveAlerts]));
+
+  // `:nom:` devient l'emoji. Une extension en ligne n'est jamais appelée dans
+  // un bloc ou un code en ligne : le code reste intact. Nom inconnu : texte tel quel.
+  marked.use({
+    extensions: [{
+      name: 'emoji',
+      level: 'inline',
+      start(src) { return src.indexOf(':'); },
+      tokenizer(src) {
+        const m = /^:([a-z0-9_+-]+):/.exec(src);
+        if (m && emoji.existe(m[1])) return { type: 'emoji', raw: m[0], emoji: emoji.TABLE[m[1]] };
+        return undefined;
+      },
+      renderer(token) { return token.emoji; },
+    }],
+  });
 
   marked.use({ gfm: true, breaks: false });
 

@@ -38,6 +38,9 @@
     { id: 'format:code', groupe: 'Format', libelle: 'Bloc de code', accel: 'CmdOrCtrl+Alt+C' },
     { id: 'format:citation', groupe: 'Format', libelle: 'Citation', accel: 'CmdOrCtrl+Shift+.' },
     { id: 'format:saut-page', groupe: 'Format', libelle: 'Saut de page', accel: 'CmdOrCtrl+Enter' },
+    { id: 'ecriture:tableau-editeur', groupe: 'Format', libelle: 'Éditeur de tableau…', accel: 'CmdOrCtrl+Alt+Shift+T' },
+    { id: 'ecriture:reformater-document', groupe: 'Format', libelle: 'Reformater le document', accel: 'CmdOrCtrl+Alt+Shift+F' },
+    { id: 'ecriture:reformater-selection', groupe: 'Format', libelle: 'Reformater la sélection', accel: 'CmdOrCtrl+Alt+Shift+R' },
     // Affichage
     { id: 'vue:code', groupe: 'Affichage', libelle: 'Afficher/masquer le volet code', accel: 'CmdOrCtrl+/' },
     { id: 'vue:theme', groupe: 'Affichage', libelle: 'Basculer le thème', accel: 'CmdOrCtrl+T' },

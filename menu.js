@@ -50,7 +50,7 @@ function creerTemplate({ plateforme, nomApp = 'MD Reader', recents = [], envoyer
 
   // Entrées Format issues de la table, avec des séparateurs entre familles
   // (marques, titres, listes, insertions).
-  const apresFamille = new Set(['format:barre', 'format:titre3', 'format:taches', 'format:citation']);
+  const apresFamille = new Set(['format:barre', 'format:titre3', 'format:taches', 'format:citation', 'format:saut-page']);
   const entreesFormat = raccourcis.TABLE.filter((r) => r.groupe === 'Format' && r.menu !== false);
   const formatFinal = [];
   entreesFormat.forEach((r, i) => {

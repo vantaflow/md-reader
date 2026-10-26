@@ -30,6 +30,7 @@ test('Format : toutes les actions avec les raccourcis de la spec', () => {
     'Liste à puces': 'CmdOrCtrl+Shift+8', 'Liste numérotée': 'CmdOrCtrl+Shift+7', 'Liste de tâches': 'CmdOrCtrl+Shift+9',
     Lien: 'CmdOrCtrl+K', Image: 'CmdOrCtrl+Shift+I', Tableau: 'CmdOrCtrl+Alt+T', 'Bloc de code': 'CmdOrCtrl+Alt+C',
     Citation: 'CmdOrCtrl+Shift+.', 'Saut de page': 'CmdOrCtrl+Enter',
+    'Éditeur de tableau…': 'CmdOrCtrl+Alt+Shift+T', 'Reformater le document': 'CmdOrCtrl+Alt+Shift+F', 'Reformater la sélection': 'CmdOrCtrl+Alt+Shift+R',
   };
   assert.deepStrictEqual(Object.fromEntries(format.map((i) => [i.label, i.accelerator])), attendu);
 });

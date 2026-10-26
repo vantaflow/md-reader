@@ -9,7 +9,7 @@
     "build": "npm run bundle && electron-builder",
     "build:mac": "npm run bundle && electron-builder --mac",
     "build:win": "npm run bundle && electron-builder --win",
-    "test": "npm run bundle && node --test test/markdown.test.js test/pdf.test.js test/packaging.test.js test/settings.test.js test/format.test.js test/menu.test.js test/images.test.js test/tableau.test.js test/reformat.test.js test/ecriture.test.js test/modeles-snippets.test.js test/plan.test.js test/navigation.test.js test/dossier.test.js && electron test/smoke.js && electron test/smoke-lot1.js && electron test/smoke-docx.js && electron test/smoke-focus.js && electron test/smoke-images.js && electron test/smoke-lot2a.js && electron test/smoke-lot2b.js"
+    "test": "npm run bundle && node --test test/markdown.test.js test/pdf.test.js test/packaging.test.js test/settings.test.js test/format.test.js test/menu.test.js test/images.test.js test/tableau.test.js test/reformat.test.js test/ecriture.test.js test/modeles-snippets.test.js test/plan.test.js test/navigation.test.js test/remplacement.test.js test/dossier.test.js test/remplacement-dossier.test.js && electron test/smoke.js && electron test/smoke-lot1.js && electron test/smoke-docx.js && electron test/smoke-focus.js && electron test/smoke-images.js && electron test/smoke-lot2a.js && electron test/smoke-lot2b.js"
   },
   "author": "",
   "license": "MIT",
@@ -53,6 +53,7 @@
       "images.js",
       "contexte.js",
       "donnees.js",
+      "remplacement.js",
       "renderer/**/*",
       "package.json"
     ],

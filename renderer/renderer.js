@@ -178,6 +178,23 @@ function closeTab(t) {
   } else renderTabs();
 }
 
+// Recharge un onglet depuis le disque après une modification externe (ici un
+// remplacement dans le dossier) ; l'appelant n'y passe que des onglets sans
+// modifications en cours.
+function rechargerOnglet(t, content) {
+  t.content = content;
+  if (t === activeTab) {
+    suppressChange = true;
+    editor.setValue(content);
+    suppressChange = false;
+    render();
+    markClean();
+  } else {
+    t.dirty = false;
+    renderTabs();
+  }
+}
+
 function renderTabs() {
   tabsEl.innerHTML = '';
   for (const t of tabs) {
@@ -408,7 +425,7 @@ async function doSearch() {
   const out = document.getElementById('search-results');
   out.innerHTML = '';
   if (!folderRoot || !q) return;
-  const results = await window.api.searchFolder({ root: folderRoot, query: q });
+  const results = (await window.api.searchFolder({ root: folderRoot, query: q })) || [];
   for (const r of results) {
     const div = document.createElement('div');
     div.className = 'result';
@@ -1266,6 +1283,7 @@ Object.assign(window.mdr = window.mdr || {}, {
     activer: setActiveTab,
     enregistrer: saveFile,
     marquerModifie: markDirty,
+    recharger: rechargerOnglet,
   },
 });
 

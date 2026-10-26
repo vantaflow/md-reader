@@ -8,7 +8,7 @@ const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
-const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens } = require('./donnees.js');
+const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
 const URL_DEPOT = 'https://github.com/vantaflow/md-to-pdf-app';
@@ -21,7 +21,7 @@ let watcher = null;
 // par le renderer, sans dialogue et sans autre vérification.
 let dernierDossierLot = null;
 // Dossier ouvert par l'utilisateur via la boîte de dialogue `folder:open` : les
-// canaux de navigation (tags, rétroliens) n'agissent que
+// canaux de navigation (tags, rétroliens, rechercher/remplacer) n'agissent que
 // dessus, jamais sur un chemin choisi par le renderer.
 let dossierOuvert = null;
 
@@ -658,9 +658,10 @@ ipcMain.handle('folder:list-md-relatifs', async (_e, dossier) => {
   catch (e) { return { erreur: e.message }; }
 });
 
-// ─── Navigation dans le dossier ouvert ──────────────────────
+// ─── Navigation et remplacement dans le dossier ouvert ──────────────────────
 // Chaque canal exige que `root` soit le dossier choisi par l'utilisateur dans
-// la boîte de dialogue ; sinon { erreur }.
+// la boîte de dialogue ; sinon { erreur }. Les écritures (`replace-apply`) ne
+// touchent que des .md sous ce dossier (voir donnees.js).
 function racineOuverte(root) {
   if (!dossierOuvert || typeof root !== 'string' || path.resolve(root) !== dossierOuvert) {
     throw new Error('Ce dossier n’est pas le dossier ouvert.');
@@ -675,3 +676,5 @@ const canalDossier = (traitement) => async (_e, charge) => {
 };
 ipcMain.handle('folder:scan-tags', canalDossier((racine) => scannerTags(racine)));
 ipcMain.handle('folder:backlinks', canalDossier((racine, c) => trouverRetroliens(racine, c.cible)));
+ipcMain.handle('folder:replace-preview', canalDossier((racine, c) => apercuRemplacement(racine, c.parametres)));
+ipcMain.handle('folder:replace-apply', canalDossier((racine, c) => appliquerRemplacement(racine, c.parametres, c.selection)));

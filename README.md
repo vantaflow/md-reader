@@ -62,6 +62,7 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Rétroliens** (sous le plan, onglet « Plan ») : les `.md` du dossier ouvert qui citent le document courant par `[[nom]]` ou par un lien relatif, avec un extrait de la ligne ; un clic ouvre le document. Le scan est confiné au dossier ouvert (4 niveaux, 500 fichiers, 2 Mo par fichier, 100 résultats), en lecture seule
 - **Favoris** : l'étoile d'une ligne de l'arbre (ou la commande de palette « Épingler/Désépingler le document ») épingle un fichier ; la section « Favoris » s'affiche en haut de l'onglet Fichiers (✕ pour retirer) et la liste est mémorisée dans les réglages
 - **Filtre par tags** : les tags du front-matter (`tags: [a, b]`, `tags: a, b` ou liste YAML `- a`) des `.md` du dossier ouvert sont proposés dans l'onglet Fichiers ; cliquer sur un tag filtre l'arborescence (plusieurs tags se cumulent), le champ de saisie restreint la liste des tags et le filtre ; « Effacer le filtre » rétablit l'arbre. Seuls les 16 premiers Ko de chaque fichier sont lus
+- **Rechercher/remplacer dans tout le dossier** (onglet Recherche, ou palette → « Rechercher/remplacer dans le dossier… ») : le champ de recherche existant, un champ « Remplacer par » et trois options (casse, mot entier, expression régulière avec `$1`, `$&`). **Aperçu des changements** affiche, par fichier, chaque occurrence avant/après (ligne par ligne) avec une case à cocher par fichier et par occurrence ; **Appliquer** demande confirmation puis écrit. Le remplacement ne touche que les `.md` du dossier ouvert (tout chemin hors dossier est refusé), écrit de façon atomique (fichier temporaire puis renommage) et relit chaque fichier : un fichier modifié depuis l'aperçu est sauté et signalé. Un fichier dont l'onglet a des modifications non enregistrées est ignoré ; les autres onglets concernés sont rechargés. Bornes : 500 caractères de recherche, 2 000 de remplacement, 500 occurrences par fichier, 5 000 au total, 2 Mo par fichier ; une expression invalide ou qui reconnaît la chaîne vide affiche un message, sans exception
 
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
@@ -311,6 +312,7 @@ md-to-pdf-app/
 ├── menu.js                     # Gabarit des menus natifs et liste des documents récents (sans Electron)
 ├── images.js                   # Enregistrement borné des images collées dans images/ (sans Electron)
 ├── contexte.js                 # Menu contextuel et langues du correcteur orthographique (sans Electron)
+├── remplacement.js             # Rechercher/remplacer : expressions, occurrences avant/après, bornes (sans Electron)
 ├── donnees.js                  # Snippets (snippets.json), liste bornée des .md d'un dossier, tags et rétroliens (sans Electron)
 ├── preload.js                  # Bridge contextIsolation entre main et renderer
 ├── pdf.js                      # Options de rendu, lecture des destinations d'un PDF,
@@ -346,6 +348,7 @@ md-to-pdf-app/
 │   │   ├── wiki.js             #   clic sur les liens wiki, panneau Rétroliens (1.9.0)
 │   │   ├── favoris.js          #   fichiers épinglés (1.9.0)
 │   │   ├── tags.js             #   filtre par tags dans l'onglet Fichiers (1.9.0)
+│   │   ├── remplacer.js        #   rechercher/remplacer dans le dossier, aperçu et application (1.9.0)
 │   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
 │   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
 │   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
@@ -377,6 +380,8 @@ md-to-pdf-app/
 ├── test/plan.test.js           # Plan du document : sections, déplacement (1.9.0)
 ├── test/navigation.test.js     # Liens wiki, rétroliens, tags, rendu des liens wiki (1.9.0)
 ├── test/dossier.test.js        # IPC bornées du dossier ouvert : tags, rétroliens (1.9.0)
+├── test/remplacement.test.js   # Rechercher/remplacer : expressions, groupes, bornes (1.9.0)
+├── test/remplacement-dossier.test.js # Aperçu et application dans un dossier : confinement, empreinte (1.9.0)
 ├── test/helpers.js             # Aide commune aux tests Electron (fenêtre invisible, check)
 ├── test/smoke.js               # Test de fumée end-to-end, sous Electron
 ├── test/smoke-lot1.js          # Réglages, menus, barre de mise en forme, préférences

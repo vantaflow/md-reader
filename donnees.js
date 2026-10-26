@@ -6,6 +6,7 @@ const path = require('path');
 const snippets = require('./renderer/lib/snippets.js');
 const wiki = require('./renderer/lib/wiki.js');
 const tagsLib = require('./renderer/lib/tags.js');
+const remplacement = require('./remplacement.js');
 
 const FICHIER_SNIPPETS = 'snippets.json';
 const EXT_MD = /\.(md|markdown|mdown|mkd)$/i;
@@ -79,7 +80,6 @@ async function listerMdRelatifs(dossier) {
   return { dossier: racine, fichiers };
 }
 
-const TAILLE_FICHIER_MAX = 2 * 1024 * 1024;
 const LECTURE_TAGS_MAX = 16 * 1024;
 
 // Lit au plus `max` octets au début d'un fichier (texte UTF-8) ; null si illisible.
@@ -97,7 +97,7 @@ async function lireDebut(chemin, max) {
 async function lireBorne(chemin) {
   try {
     const st = await fs.stat(chemin);
-    if (!st.isFile() || st.size > TAILLE_FICHIER_MAX) return null;
+    if (!st.isFile() || st.size > remplacement.LIMITES.tailleFichierMax) return null;
     return await fs.readFile(chemin, 'utf8');
   } catch { return null; }
 }
@@ -139,4 +139,104 @@ async function trouverRetroliens(dossier, cible) {
   return { dossier: racine, cible: relCible, retroliens };
 }
 
-module.exports = { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, FICHIER_SNIPPETS, PROFONDEUR_MAX, FICHIERS_MAX };
+// ── Rechercher/remplacer dans le dossier ────────────────────────────────
+
+// Aperçu (lecture seule) : pour chaque .md du dossier, les occurrences avec la
+// ligne avant/après. { dossier, fichiers: [{ rel, chemin, empreinte, tronque,
+// occurrences: [{ indice, ligne, avant, apres }] }], total, tronque, ignores }
+// ou { erreur } pour des paramètres invalides.
+async function apercuRemplacement(dossier, parametres) {
+  const racine = await validerRacine(dossier);
+  const { re, erreur } = remplacement.construireRegex(parametres);
+  if (erreur) return { erreur };
+  const L = remplacement.LIMITES;
+  const fichiers = [];
+  const ignores = [];
+  let total = 0;
+  let tronque = false;
+  for (const f of await parcourirMd(racine)) {
+    if (total >= L.occurrencesTotal) { tronque = true; break; }
+    const contenu = await lireBorne(f.abs);
+    if (contenu === null) { ignores.push(f.rel); continue; }
+    const max = Math.min(L.occurrencesParFichier, L.occurrencesTotal - total);
+    const r = remplacement.trouverOccurrences(contenu, re, parametres, max);
+    if (!r.occurrences.length) continue;
+    total += r.occurrences.length;
+    if (r.tronque) tronque = true;
+    fichiers.push({
+      rel: f.rel,
+      chemin: f.abs,
+      empreinte: remplacement.empreinte(contenu),
+      tronque: r.tronque,
+      occurrences: r.occurrences.map(({ indice, ligne, avant, apres }) => ({ indice, ligne, avant, apres })),
+    });
+  }
+  return { dossier: racine, fichiers, total, tronque, ignores };
+}
+
+const sortDuDossier = (relatif) => relatif === '..' || relatif.startsWith('..' + path.sep) || path.isAbsolute(relatif);
+
+// Chemin absolu d'un .md du dossier désigné par `rel`, ou null s'il sort du
+// dossier (chemin absolu, `..`, lien symbolique vers l'extérieur) ou n'est pas
+// un document Markdown.
+async function cheminConfine(racine, rel) {
+  if (typeof rel !== 'string' || !rel || path.isAbsolute(rel) || rel.includes('\0')) return null;
+  const abs = path.resolve(racine, rel);
+  const depuisRacine = path.relative(racine, abs);
+  if (!depuisRacine || sortDuDossier(depuisRacine)) return null;
+  if (!EXT_MD.test(abs)) return null;
+  try {
+    const lst = await fs.lstat(abs);
+    if (!lst.isFile() || lst.isSymbolicLink()) return null;
+    const reel = await fs.realpath(abs);
+    const racineReelle = await fs.realpath(racine);
+    const dep = path.relative(racineReelle, reel);
+    if (!dep || sortDuDossier(dep)) return null;
+  } catch { return null; }
+  return abs;
+}
+
+// Écriture atomique : fichier temporaire voisin puis renommage.
+async function ecrireAtomique(chemin, contenu) {
+  const tmp = path.join(path.dirname(chemin), `.${path.basename(chemin)}.${process.pid}.${Math.random().toString(36).slice(2, 8)}.tmp`);
+  try {
+    await fs.writeFile(tmp, contenu, 'utf8');
+    await fs.rename(tmp, chemin);
+  } catch (e) {
+    await fs.unlink(tmp).catch(() => {});
+    throw e;
+  }
+}
+
+// Applique le remplacement aux seules occurrences choisies. `selection` :
+// [{ rel, empreinte, indices }] (celles de l'aperçu). Un fichier modifié depuis
+// l'aperçu (empreinte différente), illisible ou hors dossier est sauté. Renvoie
+// { modifies: [{ rel, chemin, remplacements }], sautes: [{ rel, raison }] } ou { erreur }.
+async function appliquerRemplacement(dossier, parametres, selection) {
+  const racine = await validerRacine(dossier);
+  const { re, erreur } = remplacement.construireRegex(parametres);
+  if (erreur) return { erreur };
+  if (!Array.isArray(selection)) return { erreur: 'Sélection invalide.' };
+  const L = remplacement.LIMITES;
+  const modifies = [];
+  const sautes = [];
+  for (const choix of selection.slice(0, L.fichiersMax)) {
+    const rel = choix && typeof choix.rel === 'string' ? choix.rel : '';
+    const abs = await cheminConfine(racine, rel);
+    if (!abs) { sautes.push({ rel, raison: 'fichier hors du dossier ouvert ou non Markdown' }); continue; }
+    const indices = Array.isArray(choix.indices) ? choix.indices.filter((n) => Number.isInteger(n) && n >= 0).slice(0, L.occurrencesParFichier) : [];
+    if (!indices.length) continue;
+    const contenu = await lireBorne(abs);
+    if (contenu === null) { sautes.push({ rel, raison: 'fichier illisible ou trop gros' }); continue; }
+    if (remplacement.empreinte(contenu) !== choix.empreinte) { sautes.push({ rel, raison: 'modifié depuis l’aperçu' }); continue; }
+    const { occurrences } = remplacement.trouverOccurrences(contenu, re, parametres, L.occurrencesParFichier);
+    const res = remplacement.appliquer(contenu, occurrences, indices);
+    if (!res.remplacees) continue;
+    try { await ecrireAtomique(abs, res.contenu); }
+    catch (e) { sautes.push({ rel, raison: 'écriture impossible : ' + (e && e.message ? e.message : e) }); continue; }
+    modifies.push({ rel, chemin: abs, remplacements: res.remplacees });
+  }
+  return { modifies, sautes };
+}
+
+module.exports = { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens, apercuRemplacement, appliquerRemplacement, FICHIER_SNIPPETS, PROFONDEUR_MAX, FICHIERS_MAX };

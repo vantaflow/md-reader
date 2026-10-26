@@ -563,3 +563,24 @@ body.sans-barre-outils #barre-format { display: none; }
 #tags-liste .tag.actif { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 #tags-liste .effacer { border-style: dashed; color: var(--fg-muted); }
 #file-tree .aucun { padding: 6px 8px; color: var(--fg-muted); font-size: 12px; }
+
+/* Rechercher/remplacer dans le dossier (navigation 1.9.0) */
+#remplacer { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 6px; }
+#replace-input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.options-remplacer { display: flex; gap: 10px; font-size: 12px; color: var(--fg-muted); }
+.options-remplacer label { display: flex; align-items: center; gap: 3px; cursor: pointer; }
+#replace-preview-btn, #replace-apply { padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-alt); color: var(--fg); cursor: pointer; font-size: 12px; }
+#replace-apply { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+#replace-apply:disabled { opacity: 0.5; cursor: default; }
+#replace-preview { padding: 0 8px 8px; font-size: 12px; overflow: auto; }
+#replace-preview .resume { margin: 4px 0 6px; color: var(--fg-muted); }
+#replace-preview .erreur { color: #c0392b; padding: 4px 0; }
+#replace-preview .rp-fichier { border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; }
+#replace-preview .rp-fichier > summary { cursor: pointer; padding: 4px 6px; display: flex; align-items: center; gap: 4px; background: var(--bg-alt); }
+#replace-preview .rp-fichier .rel { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+#replace-preview .rp-occ { padding: 3px 6px; border-top: 1px solid var(--border); }
+#replace-preview .rp-occ label { display: flex; gap: 4px; align-items: center; color: var(--fg-muted); font-size: 11px; }
+#replace-preview .rp-avant, #replace-preview .rp-apres { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; padding: 1px 4px; border-radius: 2px; }
+#replace-preview .rp-avant { background: rgba(220, 60, 60, 0.15); }
+#replace-preview .rp-apres { background: rgba(60, 170, 90, 0.18); }
+#replace-preview .sautes { color: var(--fg-muted); font-size: 11px; margin-top: 4px; }

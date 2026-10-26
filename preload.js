@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('api', {
   listerMdRelatifs: (dossier) => ipcRenderer.invoke('folder:list-md-relatifs', dossier),
   scannerTags: (root) => ipcRenderer.invoke('folder:scan-tags', { root }),
   retroliens: (root, cible) => ipcRenderer.invoke('folder:backlinks', { root, cible }),
+  apercuRemplacement: (root, parametres) => ipcRenderer.invoke('folder:replace-preview', { root, parametres }),
+  appliquerRemplacement: (root, parametres, selection) => ipcRenderer.invoke('folder:replace-apply', { root, parametres, selection }),
   pleinEcran: (actif) => ipcRenderer.invoke('fenetre:plein-ecran', !!actif),
   print: (payload) => ipcRenderer.invoke('file:print', payload),
   setDefaultMarkdown: () => ipcRenderer.invoke('app:set-default-md'),

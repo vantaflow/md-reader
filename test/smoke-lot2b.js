@@ -73,6 +73,8 @@ const glisser = (de, vers, moitie) => h.js(`(() => {
       'file:save': (_e, { filePath, content }) => { appelsEcriture.push(filePath); fs.writeFileSync(filePath, content); return filePath; },
       'folder:list-md-relatifs': async (_e, d) => { try { return await donnees.listerMdRelatifs(d); } catch (e) { return { erreur: e.message }; } },
       'folder:scan-tags': async (_e, { root }) => erreurRacine(root) || donnees.scannerTags(root),
+      'folder:replace-preview': async (_e, { root, parametres }) => erreurRacine(root) || donnees.apercuRemplacement(root, parametres),
+      'folder:replace-apply': async (_e, { root, parametres, selection }) => erreurRacine(root) || donnees.appliquerRemplacement(root, parametres, selection),
       'folder:backlinks': async (_e, { root, cible }) => erreurRacine(root) || donnees.trouverRetroliens(root, cible).catch((e) => ({ erreur: e.message })),
     },
   });
@@ -286,6 +288,114 @@ const glisser = (de, vers, moitie) => h.js(`(() => {
   check('Tags — champ vidé : arbre complet', (await fichiersArbre()).length >= 5);
   check('Tags — dossier ouvert sans refus : le scan reçoit le bon dossier', await h.js(`window.mdr.tags.liste().length === 3`));
 
+  // ── Tâche 13 : rechercher/remplacer dans le dossier ───────────────────
+  ecrireFichier('rp1.md', 'zorglub un\nZorglub deux, zorglubien\nfin\n');
+  ecrireFichier('rp2.md', 'rien\nzorglub ici\n');
+  ecrireFichier('sous/rp3.md', 'zorglub trois\n');
+  const victime = path.join(path.dirname(racine), 'victime-lot2b.md');
+  fs.writeFileSync(victime, 'zorglub hors dossier\n');
+  const lireF = (rel) => fs.readFileSync(chemin(rel), 'utf8');
+  await commande('fichier:dossier');
+  await pause(700);
+  await clic('.sidebar-tabs [data-tab="search"]');
+  const apercuBtn = () => clic('#replace-preview-btn');
+  const blocs = () => h.jsonJs(`Array.from(document.querySelectorAll('#replace-preview .rp-fichier')).map((b) => ({ rel: b.dataset.rel, n: b.querySelectorAll('.rp-occ').length, avant: Array.from(b.querySelectorAll('.rp-avant')).map((x) => x.textContent), apres: Array.from(b.querySelectorAll('.rp-apres')).map((x) => x.textContent) }))`);
+  check('Remplacer — le champ « Remplacer par », les options et le bouton d’aperçu existent', await h.js(`['replace-input', 'opt-casse', 'opt-mot', 'opt-regex', 'replace-preview-btn'].every((id) => !!document.getElementById(id))`));
+  await apercuBtn();
+  await pause(300);
+  check('Remplacer — sans texte recherché, l’aperçu demande de le saisir', (await h.js(`document.querySelector('#replace-preview .erreur').textContent`)).includes('Saisissez'));
+  await saisir('#search-input', 'zorglub');
+  await saisir('#replace-input', 'GLOUBI');
+  await apercuBtn();
+  await pause(500);
+  const b1 = await blocs();
+  check('Remplacer — l’aperçu liste, par fichier, chaque occurrence (insensible à la casse par défaut)', b1.map((b) => b.rel + ':' + b.n).join('|') === 'rp1.md:3|rp2.md:1|sous/rp3.md:1', JSON.stringify(b1.map((b) => b.rel + ':' + b.n)));
+  check('Remplacer — chaque occurrence montre la ligne avant et après', b1[0].avant[0] === '− zorglub un' && b1[0].apres[0] === '+ GLOUBI un' && b1[0].apres[1] === '+ GLOUBI deux, zorglubien', JSON.stringify(b1[0]));
+  check('Remplacer — rien n’est écrit par l’aperçu', lireF('rp1.md') === 'zorglub un\nZorglub deux, zorglubien\nfin\n' && fs.readFileSync(victime, 'utf8') === 'zorglub hors dossier\n');
+  check('Remplacer — le résumé annonce le nombre d’occurrences et de fichiers', (await h.js(`document.querySelector('#replace-preview .resume').textContent`)).startsWith('5 occurrences dans 3 fichiers'));
+  check('Remplacer — cases à cocher par fichier et par occurrence, toutes cochées', await h.js(`document.querySelectorAll('#replace-preview .rp-fichier > summary input:checked').length === 3 && document.querySelectorAll('#replace-preview .rp-occ input:checked').length === 5`));
+  check('Remplacer — le bouton Appliquer annonce le nombre de remplacements', (await h.js(`document.getElementById('replace-apply').textContent`)) === 'Appliquer (5 remplacements)');
+
+  // Options : casse, mot entier, expression régulière.
+  await clic('#opt-casse');
+  await apercuBtn();
+  await pause(400);
+  check('Remplacer — option « casse » : seules les occurrences de même casse', (await blocs()).map((b) => b.rel + ':' + b.n).join('|') === 'rp1.md:2|rp2.md:1|sous/rp3.md:1');
+  await clic('#opt-mot');
+  await apercuBtn();
+  await pause(400);
+  check('Remplacer — option « mot entier » : « zorglubien » exclu', (await blocs())[0].n === 1 && (await blocs())[0].avant[0] === '− zorglub un');
+  await clic('#opt-casse');
+  await clic('#opt-mot');
+  await clic('#opt-regex');
+  await saisir('#search-input', '(zorglub)(\\w*)');
+  await saisir('#replace-input', '[$2|$1]');
+  await apercuBtn();
+  await pause(400);
+  const bre = await blocs();
+  check('Remplacer — expression régulière avec groupes ($1, $2)', bre[0].apres[0] === '+ [|zorglub] un' && bre[0].apres[1] === '+ [|Zorglub] deux, zorglubien' && bre[0].apres[2] === '+ Zorglub deux, [ien|zorglub]', JSON.stringify(bre[0]));
+  await saisir('#search-input', '(zorglub');
+  await apercuBtn();
+  await pause(400);
+  check('Remplacer — expression régulière invalide : message d’erreur, pas d’exception', /invalide/i.test(await h.js(`document.querySelector('#replace-preview .erreur').textContent`)) && (await h.js(`document.querySelectorAll('#replace-preview .rp-fichier').length`)) === 0);
+  await saisir('#search-input', 'a*');
+  await apercuBtn();
+  await pause(400);
+  check('Remplacer — une expression qui reconnaît la chaîne vide est refusée', /vide/.test(await h.js(`document.querySelector('#replace-preview .erreur').textContent`)));
+  await clic('#opt-regex');
+
+  // Sélection fine puis application avec confirmation.
+  await saisir('#search-input', 'zorglub');
+  await saisir('#replace-input', 'GLOUBI');
+  await apercuBtn();
+  await pause(500);
+  await h.js(`document.querySelector('#replace-preview .rp-fichier[data-rel="rp1.md"] .rp-occ:nth-of-type(2) input').click(); true`);
+  await h.js(`document.querySelector('#replace-preview .rp-fichier[data-rel="rp2.md"] > summary input').click(); true`);
+  await pause(100);
+  check('Remplacer — décocher une occurrence ou un fichier met le compteur à jour', (await h.js(`document.getElementById('replace-apply').textContent`)) === 'Appliquer (3 remplacements)' && (await h.js(`document.querySelector('#replace-preview .rp-fichier[data-rel="rp1.md"] > summary input').indeterminate`)) === true);
+  await ouvrirDoc('rp1.md');
+  await ouvrirDoc('sous/rp3.md');
+  await pause(300);
+  // rp3 est modifié dans son onglet : il ne doit pas être écrasé.
+  await h.js(`(() => { const t = window.mdr.onglets.liste().find((x) => x.path.endsWith('rp3.md')); window.mdr.onglets.activer(t); window.mdr.editeur().insertText('local '); return true; })()`);
+  await pause(200);
+  await h.js(`window.__questions = []; window.confirm = (m) => { window.__questions.push(m); return false; }; true`);
+  await clic('#replace-apply');
+  await pause(300);
+  const q1 = await h.jsonJs(`window.__questions`);
+  check('Remplacer — « Appliquer » demande confirmation avec les nombres', q1.length === 1 && /2 occurrences dans 1 fichier/.test(q1[0]), JSON.stringify(q1));
+  check('Remplacer — refus : aucun fichier modifié', lireF('rp1.md') === 'zorglub un\nZorglub deux, zorglubien\nfin\n' && lireF('rp2.md') === 'rien\nzorglub ici\n');
+  // Un fichier modifié sur le disque depuis l'aperçu est sauté (on triche : rp2 est décoché, on utilise rp1).
+  await h.js(`window.confirm = (m) => { window.__questions.push(m); return true; }; true`);
+  await clic('#replace-apply');
+  await pause(900);
+  check('Remplacer — acceptation : seules les occurrences cochées sont remplacées', lireF('rp1.md') === 'GLOUBI un\nZorglub deux, GLOUBIien\nfin\n', JSON.stringify(lireF('rp1.md')));
+  check('Remplacer — un fichier décoché reste intact', lireF('rp2.md') === 'rien\nzorglub ici\n');
+  check('Remplacer — un fichier dont l’onglet a des modifications non enregistrées est ignoré (pas écrasé)', lireF('sous/rp3.md') === 'zorglub trois\n');
+  check('Remplacer — le fichier hors dossier n’est jamais touché', fs.readFileSync(victime, 'utf8') === 'zorglub hors dossier\n');
+  const rp1Onglet = await h.js(`(() => { const t = window.mdr.onglets.liste().find((x) => x.path.endsWith('rp1.md')); window.mdr.onglets.activer(t); return window.mdr.editeur().getValue(); })()`);
+  await pause(300);
+  check('Remplacer — l’onglet ouvert est rechargé avec le nouveau contenu', rp1Onglet === 'GLOUBI un\nZorglub deux, GLOUBIien\nfin\n', JSON.stringify(rp1Onglet));
+  check('Remplacer — le résumé indique les remplacements, l’onglet rechargé et le fichier ignoré', await h.js(`(() => { const t = document.querySelector('#replace-preview .resume').textContent; return /2 remplacements dans 1 fichier/.test(t) && /onglet rechargé/.test(t) && /ignoré/.test(t); })()`), await h.js(`document.querySelector('#replace-preview .resume').textContent`));
+
+  // Fichier modifié entre l'aperçu et l'application : sauté.
+  await h.js(`window.mdr.onglets.activer(window.mdr.onglets.liste().find((x) => x.path.endsWith('rp1.md'))); true`);
+  await saisir('#search-input', 'zorglub');
+  await saisir('#replace-input', 'ALPHA');
+  await apercuBtn();
+  await pause(500);
+  fs.writeFileSync(chemin('rp2.md'), 'rien\nzorglub ici, changé ailleurs\n');
+  await clic('#replace-apply');
+  await pause(900);
+  check('Remplacer — un fichier modifié depuis l’aperçu est sauté, signalé, et laissé tel quel', lireF('rp2.md') === 'rien\nzorglub ici, changé ailleurs\n' && /rp2\.md : modifié depuis l’aperçu/.test(await h.js(`document.querySelector('#replace-preview .resume').textContent`)), await h.js(`document.querySelector('#replace-preview .resume').textContent`));
+  check('Remplacer — les autres fichiers de la même demande sont bien traités', lireF('rp1.md').includes('ALPHA') && !lireF('rp1.md').includes('ALPHA ALPHA'));
+
+  // IPC directe : aucun chemin hors dossier n'est écrit.
+  const attaque = JSON.parse(await h.js(`window.api.appliquerRemplacement(${JSON.stringify(racine)}, { recherche: 'zorglub', remplacement: 'PWNED' }, [{ rel: '../victime-lot2b.md', empreinte: ${JSON.stringify(require('../remplacement.js').empreinte('zorglub hors dossier\n'))}, indices: [0] }, { rel: ${JSON.stringify(victime)}, empreinte: 'x', indices: [0] }]).then((r) => JSON.stringify(r))`));
+  check('Remplacer — un chemin hors du dossier ouvert est refusé par l’IPC', attaque.modifies.length === 0 && attaque.sautes.length === 2 && fs.readFileSync(victime, 'utf8') === 'zorglub hors dossier\n', JSON.stringify(attaque));
+  check('Remplacer — la commande de palette ouvre l’onglet Recherche', await (async () => { await clic('.sidebar-tabs [data-tab="files"]'); await commande('recherche:remplacer-dossier'); return h.js(`document.getElementById('tab-search').classList.contains('active') && document.activeElement.id === 'search-input'`); })());
+
+  fs.rmSync(victime, { force: true });
   fs.rmSync(racine, { recursive: true, force: true });
   h.terminer();
 })().catch(h.erreurFatale);

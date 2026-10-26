@@ -61,6 +61,16 @@
       </div>
       <div id="tab-search" class="tab-panel">
         <input type="text" id="search-input" placeholder="Rechercher dans le dossier…" />
+        <div id="remplacer">
+          <input type="text" id="replace-input" placeholder="Remplacer par…" autocomplete="off" />
+          <div class="options-remplacer">
+            <label title="Respecter la casse"><input type="checkbox" id="opt-casse" /> Aa</label>
+            <label title="Mot entier"><input type="checkbox" id="opt-mot" /> Mot</label>
+            <label title="Expression régulière ($1, $&amp; dans le remplacement)"><input type="checkbox" id="opt-regex" /> .*</label>
+          </div>
+          <button type="button" id="replace-preview-btn">Aperçu des changements</button>
+        </div>
+        <div id="replace-preview" class="hidden"></div>
         <div id="search-results"></div>
       </div>
     </aside>
@@ -159,6 +169,7 @@
   <script src="features/wiki.js"></script>
   <script src="features/favoris.js"></script>
   <script src="features/tags.js"></script>
+  <script src="features/remplacer.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

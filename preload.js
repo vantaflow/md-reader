@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('api', {
   lireSnippets: () => ipcRenderer.invoke('snippets:lire'),
   ecrireSnippets: (liste) => ipcRenderer.invoke('snippets:ecrire', liste),
   listerMdRelatifs: (dossier) => ipcRenderer.invoke('folder:list-md-relatifs', dossier),
+  scannerTags: (root) => ipcRenderer.invoke('folder:scan-tags', { root }),
+  retroliens: (root, cible) => ipcRenderer.invoke('folder:backlinks', { root, cible }),
   pleinEcran: (actif) => ipcRenderer.invoke('fenetre:plein-ecran', !!actif),
   print: (payload) => ipcRenderer.invoke('file:print', payload),
   setDefaultMarkdown: () => ipcRenderer.invoke('app:set-default-md'),

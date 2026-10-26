@@ -122,3 +122,29 @@ test(':::danger inconnu conserve son contenu mis en forme', () => {
   assert.doesNotMatch(html, /markdown-alert/);
   assert.match(html, /<strong>perdu \?<\/strong>/);
 });
+
+test('[[note]] devient un lien wiki', () => {
+  const html = parse('Voir [[Ma note]] ici.');
+  assert.match(html, /<a class="wikilink" href="#" data-note="Ma note">Ma note<\/a>/);
+});
+
+test('[[note|texte]] affiche le texte et garde la cible', () => {
+  const html = parse('Voir [[Ma note|ce texte]].');
+  assert.match(html, /data-note="Ma note">ce texte<\/a>/);
+});
+
+test('[[note#section]] garde l’ancre à part et le HTML est échappé', () => {
+  const html = parse('[[a"b<c#Titre|x & y]]');
+  assert.match(html, /data-note="a&quot;b&lt;c" data-ancre="Titre">x &amp; y<\/a>/);
+});
+
+test('les liens wiki ne sont pas rendus dans le code', () => {
+  const html = parse('`[[note]]`\n\n```\n[[autre]]\n```\n');
+  assert.doesNotMatch(html, /wikilink/);
+  assert.match(html, /\[\[note\]\]/);
+});
+
+test('[[toc]] et les crochets vides ne sont pas des liens wiki', () => {
+  assert.doesNotMatch(parse('[[toc]]'), /wikilink/);
+  assert.doesNotMatch(parse('[[ ]] et [[]]'), /wikilink/);
+});

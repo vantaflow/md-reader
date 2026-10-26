@@ -158,6 +158,8 @@ function setActiveTab(t) {
   renderTabs();
   window.api.watchFile(t.path || null);
   highlightTreeActive();
+  if (window.mdr.favoris) window.mdr.favoris.rendre();
+  if (window.mdr.retroliens) window.mdr.retroliens.rafraichir();
   memoriserOnglets();
 }
 
@@ -335,10 +337,27 @@ async function refreshTree() {
   if (res) renderTree(res.tree);
 }
 
+// Arbre complet du dossier ouvert ; l'affichage peut en être filtré (tags).
+let arbreCourant = [];
 function renderTree(tree) {
+  arbreCourant = tree;
+  rendreArbre();
+  if (window.mdr.tags) window.mdr.tags.rafraichir();
+  if (window.mdr.favoris) window.mdr.favoris.rendre();
+  if (window.mdr.retroliens) window.mdr.retroliens.rafraichir();
+}
+
+function rendreArbre() {
   const container = document.getElementById('file-tree');
   container.innerHTML = '';
-  container.appendChild(renderNode(tree, true));
+  const filtre = window.mdr.tags && window.mdr.tags.actif();
+  const visibles = filtre ? window.mdrTags.filtrerArbre(arbreCourant, window.mdr.tags.garde) : arbreCourant;
+  if (filtre && !visibles.length) {
+    const vide = document.createElement('div');
+    vide.className = 'aucun';
+    vide.textContent = 'Aucun fichier ne correspond à ce filtre.';
+    container.appendChild(vide);
+  } else container.appendChild(renderNode(visibles, true));
   highlightTreeActive();
 }
 
@@ -347,7 +366,7 @@ function renderNode(items, root) {
   for (const item of items) {
     if (item.type === 'dir') {
       const d = document.createElement('details');
-      if (root) d.open = true;
+      if (root || window.mdr.tags.actif()) d.open = true;
       const s = document.createElement('summary');
       s.textContent = '📁 ' + item.name;
       d.appendChild(s);
@@ -356,7 +375,11 @@ function renderNode(items, root) {
     } else {
       const f = document.createElement('div');
       f.className = 'file';
-      f.textContent = '📄 ' + item.name;
+      const nom = document.createElement('span');
+      nom.className = 'nom';
+      nom.textContent = '📄 ' + item.name;
+      f.appendChild(nom);
+      f.appendChild(window.mdr.favoris.etoile(item.path));
       f.dataset.path = item.path;
       f.title = item.path;
       f.addEventListener('click', async () => {
@@ -1233,6 +1256,8 @@ Object.assign(window.mdr = window.mdr || {}, {
   apercu: () => preview,
   synchro: { suspendre: (ms) => { synchroSuspendueJusqua = Date.now() + ms; } },
   dossier: () => folderRoot,
+  arbre: { rendre: rendreArbre, courant: () => arbreCourant },
+  arbreRafraichir: () => refreshTree(),
   onglets: {
     liste: () => tabs.slice(),
     actif: () => activeTab,

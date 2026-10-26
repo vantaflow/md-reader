@@ -45,10 +45,19 @@
       </div>
       <div id="tab-files" class="tab-panel active">
         <div id="folder-name" class="folder-name">Aucun dossier</div>
+        <div id="favoris" class="hidden"></div>
+        <div id="tags-filtre" class="hidden">
+          <input type="text" id="tags-champ" placeholder="Filtrer par tag…" autocomplete="off" />
+          <div id="tags-liste"></div>
+        </div>
         <div id="file-tree"></div>
       </div>
       <div id="tab-toc" class="tab-panel">
         <div id="toc"></div>
+        <div id="retroliens">
+          <div class="section-titre">Rétroliens</div>
+          <div id="retroliens-liste"></div>
+        </div>
       </div>
       <div id="tab-search" class="tab-panel">
         <input type="text" id="search-input" placeholder="Rechercher dans le dossier…" />
@@ -130,6 +139,8 @@
   <script src="lib/modeles.js"></script>
   <script src="lib/snippets.js"></script>
   <script src="lib/plan.js"></script>
+  <script src="lib/wiki.js"></script>
+  <script src="lib/tags.js"></script>
   <script src="commands.js"></script>
   <script src="features/reglages.js"></script>
   <script src="features/format.js"></script>
@@ -145,6 +156,9 @@
   <script src="features/snippets.js"></script>
   <script src="features/correcteur.js"></script>
   <script src="features/plan.js"></script>
+  <script src="features/wiki.js"></script>
+  <script src="features/favoris.js"></script>
+  <script src="features/tags.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

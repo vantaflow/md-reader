@@ -48,6 +48,8 @@
     // Onglets ouverts à rouvrir au démarrage (chemins des fichiers)
     ongletsOuverts: [],
     ongletActif: null,
+    // Fichiers épinglés dans l'onglet Fichiers (chemins absolus)
+    favoris: [],
   };
 
   // Valeurs permises pour les réglages à choix fermé.

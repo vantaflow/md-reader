@@ -8,7 +8,7 @@ const { pdfOptions, hasTocSlots, tocSecondPass } = require('./pdf.js');
 const { creerTemplate, ajouterRecent, assainirRecents } = require('./menu.js');
 const { enregistrerImage } = require('./images.js');
 const contexte = require('./contexte.js');
-const { lireSnippets, ecrireSnippets, listerMdRelatifs } = require('./donnees.js');
+const { lireSnippets, ecrireSnippets, listerMdRelatifs, scannerTags, trouverRetroliens } = require('./donnees.js');
 
 // Dépôt ouvert par « À propos » : adresse fixe, jamais fournie par le renderer.
 const URL_DEPOT = 'https://github.com/vantaflow/md-to-pdf-app';
@@ -20,6 +20,10 @@ let watcher = null;
 // d'enregistrement système ; ce handler écrit directement à un chemin fourni
 // par le renderer, sans dialogue et sans autre vérification.
 let dernierDossierLot = null;
+// Dossier ouvert par l'utilisateur via la boîte de dialogue `folder:open` : les
+// canaux de navigation (tags, rétroliens) n'agissent que
+// dessus, jamais sur un chemin choisi par le renderer.
+let dossierOuvert = null;
 
 // Extensions markdown reconnues par l'application (doivent rester alignées avec
 // "fileAssociations" dans package.json).
@@ -305,6 +309,7 @@ ipcMain.handle('folder:open', async () => {
     properties: ['openDirectory'],
   });
   if (canceled || !filePaths[0]) return null;
+  dossierOuvert = path.resolve(filePaths[0]);
   return buildTree(filePaths[0]);
 });
 
@@ -652,3 +657,21 @@ ipcMain.handle('folder:list-md-relatifs', async (_e, dossier) => {
   try { return await listerMdRelatifs(dossier); }
   catch (e) { return { erreur: e.message }; }
 });
+
+// ─── Navigation dans le dossier ouvert ──────────────────────
+// Chaque canal exige que `root` soit le dossier choisi par l'utilisateur dans
+// la boîte de dialogue ; sinon { erreur }.
+function racineOuverte(root) {
+  if (!dossierOuvert || typeof root !== 'string' || path.resolve(root) !== dossierOuvert) {
+    throw new Error('Ce dossier n’est pas le dossier ouvert.');
+  }
+  return dossierOuvert;
+}
+const canalDossier = (traitement) => async (_e, charge) => {
+  try {
+    const c = charge && typeof charge === 'object' ? charge : {};
+    return await traitement(racineOuverte(c.root), c);
+  } catch (e) { return { erreur: e.message }; }
+};
+ipcMain.handle('folder:scan-tags', canalDossier((racine) => scannerTags(racine)));
+ipcMain.handle('folder:backlinks', canalDossier((racine, c) => trouverRetroliens(racine, c.cible)));

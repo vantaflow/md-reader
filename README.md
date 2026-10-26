@@ -58,6 +58,10 @@ Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 ### Navigation — arrive en 1.9.0
 Ces fonctions sont développées pour la version 1.9.0 (pas encore publiée).
 - **Panneau Plan du document** (onglet « Plan » de la barre latérale, ancien « Menu ») : les sections du texte source, indentées par niveau (titres `#` à `######`, hors blocs de code et front-matter). Un clic place le curseur de l'éditeur sur le titre et fait défiler l'aperçu jusqu'à la section ; la section qui contient le curseur est surlignée. **Glisser une entrée sur une autre** déplace la section avec ses sous-sections, avant ou après la cible selon la moitié survolée ; le niveau de la section déplacée s'aligne sur celui de la cible (ses sous-sections suivent, entre 1 et 6) ; un seul `Cmd/Ctrl+Z` annule le déplacement. Les titres soulignés (`===`, `---`) ne forment pas de section
+- **Liens wiki** `[[note]]` et `[[note|texte]]` : rendus en liens dans l'aperçu (jamais dans le code), cliquables. La note est cherchée par nom de fichier, sans extension et sans tenir compte de la casse, d'abord dans le dossier du document puis dans tout le dossier ouvert (à défaut de dossier ouvert, dans celui du document) ; elle s'ouvre dans un onglet. Une note introuvable est proposée à la création (après confirmation), à côté du document, avec un nom de fichier nettoyé (jamais hors de ce dossier). `[[note#Section]]` ouvre la note sur la section. `[[toc]]` reste réservé au sommaire
+- **Rétroliens** (sous le plan, onglet « Plan ») : les `.md` du dossier ouvert qui citent le document courant par `[[nom]]` ou par un lien relatif, avec un extrait de la ligne ; un clic ouvre le document. Le scan est confiné au dossier ouvert (4 niveaux, 500 fichiers, 2 Mo par fichier, 100 résultats), en lecture seule
+- **Favoris** : l'étoile d'une ligne de l'arbre (ou la commande de palette « Épingler/Désépingler le document ») épingle un fichier ; la section « Favoris » s'affiche en haut de l'onglet Fichiers (✕ pour retirer) et la liste est mémorisée dans les réglages
+- **Filtre par tags** : les tags du front-matter (`tags: [a, b]`, `tags: a, b` ou liste YAML `- a`) des `.md` du dossier ouvert sont proposés dans l'onglet Fichiers ; cliquer sur un tag filtre l'arborescence (plusieurs tags se cumulent), le champ de saisie restreint la liste des tags et le filtre ; « Effacer le filtre » rétablit l'arbre. Seuls les 16 premiers Ko de chaque fichier sont lus
 
 ### Aperçu
 - **Aperçu live** rendu à chaque frappe, avec **défilement synchronisé** (activable/désactivable)
@@ -307,7 +311,7 @@ md-to-pdf-app/
 ├── menu.js                     # Gabarit des menus natifs et liste des documents récents (sans Electron)
 ├── images.js                   # Enregistrement borné des images collées dans images/ (sans Electron)
 ├── contexte.js                 # Menu contextuel et langues du correcteur orthographique (sans Electron)
-├── donnees.js                  # Snippets (snippets.json) et liste bornée des .md d'un dossier (sans Electron)
+├── donnees.js                  # Snippets (snippets.json), liste bornée des .md d'un dossier, tags et rétroliens (sans Electron)
 ├── preload.js                  # Bridge contextIsolation entre main et renderer
 ├── pdf.js                      # Options de rendu, lecture des destinations d'un PDF,
 │                               #   remplissage des numéros de page (sans Electron)
@@ -322,6 +326,8 @@ md-to-pdf-app/
 │   │   ├── tableau.js          #   tableaux GFM : analyse, sérialisation alignée, repérage (1.9.0)
 │   │   ├── reformat.js         #   reformatage du Markdown (1.9.0)
 │   │   ├── plan.js             #   sections du texte source et déplacement d'une section (1.9.0)
+│   │   ├── wiki.js             #   liens wiki : analyse, résolution d'une note, rétroliens (1.9.0)
+│   │   ├── tags.js             #   tags du front-matter, comptage, filtrage de l'arbre (1.9.0)
 │   │   ├── emoji.js            #   table des emoji :nom:, suggestions, remplacement (1.9.0)
 │   │   ├── liens.js            #   chemins relatifs et noms de notes pour les liens (1.9.0)
 │   │   ├── modeles.js          #   modèles de documents (1.9.0)
@@ -337,6 +343,9 @@ md-to-pdf-app/
 │   │   ├── tableau.js          #   éditeur de tableau visuel (1.9.0)
 │   │   ├── reformat.js         #   commandes de reformatage (1.9.0)
 │   │   ├── plan.js             #   panneau Plan : clic, section courante, glisser-déposer (1.9.0)
+│   │   ├── wiki.js             #   clic sur les liens wiki, panneau Rétroliens (1.9.0)
+│   │   ├── favoris.js          #   fichiers épinglés (1.9.0)
+│   │   ├── tags.js             #   filtre par tags dans l'onglet Fichiers (1.9.0)
 │   │   ├── liens.js            #   propositions de liens vers les .md (1.9.0)
 │   │   ├── modeles.js          #   Nouveau depuis un modèle (1.9.0)
 │   │   ├── snippets.js         #   Insérer, enregistrer, supprimer un snippet (1.9.0)
@@ -366,6 +375,8 @@ md-to-pdf-app/
 ├── test/ecriture.test.js       # Emoji (table, rendu) et liens relatifs (1.9.0)
 ├── test/modeles-snippets.test.js # Modèles, snippets, menu contextuel, liste des .md (1.9.0)
 ├── test/plan.test.js           # Plan du document : sections, déplacement (1.9.0)
+├── test/navigation.test.js     # Liens wiki, rétroliens, tags, rendu des liens wiki (1.9.0)
+├── test/dossier.test.js        # IPC bornées du dossier ouvert : tags, rétroliens (1.9.0)
 ├── test/helpers.js             # Aide commune aux tests Electron (fenêtre invisible, check)
 ├── test/smoke.js               # Test de fumée end-to-end, sous Electron
 ├── test/smoke-lot1.js          # Réglages, menus, barre de mise en forme, préférences

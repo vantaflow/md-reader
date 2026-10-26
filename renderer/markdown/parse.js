@@ -19,6 +19,7 @@ import { LABELS } from './labels.js';
 import { ICONS } from './icons.js';
 import hljs from 'highlight.js/lib/common';
 import emoji from '../lib/emoji.js';
+import wiki from '../lib/wiki.js';
 
 import dockerfile from 'highlight.js/lib/languages/dockerfile';
 import powershell from 'highlight.js/lib/languages/powershell';
@@ -108,6 +109,29 @@ export function createParser() {
         return undefined;
       },
       renderer(token) { return token.emoji; },
+    }],
+  });
+
+  // `[[note]]` et `[[note|texte]]` deviennent des liens de classe `wikilink`
+  // (la résolution et l'ouverture se font côté application, au clic). Une
+  // extension en ligne n'est jamais appelée dans du code : le code reste intact.
+  // `[[toc]]` reste réservé au sommaire du document.
+  const echapper = (t) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  marked.use({
+    extensions: [{
+      name: 'wikilink',
+      level: 'inline',
+      start(src) { return src.indexOf('[['); },
+      tokenizer(src) {
+        const m = /^\[\[([^\[\]\n|]+?)(?:\|([^\[\]\n]+?))?\]\]/.exec(src);
+        if (!m) return undefined;
+        const lien = wiki.analyserLien(m[1], m[2]);
+        if (!lien) return undefined;
+        return { type: 'wikilink', raw: m[0], cible: lien.cible, ancre: lien.ancre, texte: lien.texte };
+      },
+      renderer(token) {
+        return `<a class="wikilink" href="#" data-note="${echapper(token.cible)}"${token.ancre ? ` data-ancre="${echapper(token.ancre)}"` : ''}>${echapper(token.texte)}</a>`;
+      },
     }],
   });
 
